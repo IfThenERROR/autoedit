@@ -43,7 +43,7 @@ wget http://storage.googleapis.com/downloads.webmproject.org/releases/webm/libvp
 tar xjvf libvpx-1.5.0.tar.bz2
 cd libvpx-1.5.0
 ./configure --prefix="$HOME/ffmpeg_build" --disable-examples --disable-unit-tests
-make
+make -j4
 make install
 make clean
 5) Compile Raspberry Pi hardware de-/encoder (MMAL and OMX)
@@ -58,7 +58,7 @@ wget http://ffmpeg.org/releases/ffmpeg-snapshot.tar.bz2
 tar xjvf ffmpeg-snapshot.tar.bz2
 cd ffmpeg
 PKG_CONFIG_PATH="$HOME/ffmpeg_build/lib/pkgconfig" ./configure --prefix="$HOME/ffmpeg_build" --pkg-config-flags="--static" --extra-cflags="-I$HOME/ffmpeg_build/include" --extra-ldflags="-L$HOME/ffmpeg_build/lib" --bindir="$HOME/programs/ffmpeg" --enable-gpl --enable-libass --enable-libfdk-aac --enable-libfreetype --enable-libmp3lame --enable-libopus --enable-libtheora --enable-libvorbis --enable-libvpx --enable-libx264 --enable-libx265 --enable-nonfree --enable-mmal --enable-omx-rpi --disable-debug
-make
+make -j4
 make install
 make distclean
 cd $HOME
