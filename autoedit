@@ -1,0 +1,570 @@
+#! /bin/bash
+
+source "$(dirname "$(readlink -f "$0")")"/settings.txt
+
+#General settings
+#–––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+
+#Log file
+postscriptlog="${outfolder}"postscript.log
+
+#Queue file
+queuefile="${outfolder}"postscriptQueue.txt
+
+#–––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+
+function outputlog {
+	echo $(date '+%d.%m.%Y %H:%M:%S') : "$@" >> "${postscriptlog}"
+}
+
+function appendfile {
+	postscriptparams=""
+	if [ $comskip -eq 1 ]; then postscriptparams="${postscriptparams} -c"; fi
+	if [ $transcode -eq 1 ]; then postscriptparams="${postscriptparams} -t ${decoder} ${encoder} ${bitrate}"; fi
+	if [ $movefile -eq 1 ]; then postscriptparams="${postscriptparams} -r"; fi
+	if [[ $mode = "m" ]]
+	then
+		postscriptparams="${postscriptparams} -m"
+	fi
+	if [[ $mode = "s" ]]; then postscriptparams="${postscriptparams} -s"; fi
+
+	echo "${infile}" >> "${queuefile}"
+	echo "${postscriptparams}" >> "${queuefile}"
+
+	#Catch write errors
+	if [ $? -eq 1 ]
+	then
+
+		outputlog Unable to create file in ${outfolder}! Missing permission?
+		outputlog Aborting...
+		abort=1
+		return 1
+
+	else
+	
+		outputlog Creating queue for processing $infile .
+		return 0
+
+	fi
+}
+
+function readArguments {
+	mode="s"
+	comskip=0
+	transcode=0
+	decoder=""
+	encoder=""
+	bitrate=""
+	movefile=0
+	unknown=0
+	unknowncommand=""
+
+
+	#Read parameters from array $QUEUE_ARRAY field by field
+	for i in "${!QUEUE_ARRAY[@]}"; do
+
+		case "${QUEUE_ARRAY[i]}" in
+
+			-c | --comskip )		comskip=1
+									;;
+
+			-t | --transcode )		transcode=1
+									(( i++ ))
+									decoder="${QUEUE_ARRAY[i]}"
+									(( i++ ))
+									encoder="${QUEUE_ARRAY[i]}"
+									(( i++ ))
+									bitrate="${QUEUE_ARRAY[i]}"
+									;;
+
+			-m | --movie )			mode="m"
+									;;
+
+			-s | --series )			mode="s"
+									;;
+
+			-r | --rename )			movefile=1
+									;;
+
+			* )                     unknown=1
+									unknowncommand="${QUEUE_ARRAY[i]}"
+		esac
+
+		if [[ $transcode -eq 1 ]] && [[ "${decoder}" == "" || "${encoder}" == "" || "${bitrate}" == "" ]]
+		then
+		
+			outputlog Error reading parameters for queued files. Settings for transcoding are incomplete.
+			outputlog Aborting...
+			exit
+
+		fi
+
+	done
+
+outputlog infile: $infile, comskip: $comskip, transcode: $transcode, decoder: $decoder, encoder: $encoder, bitrate: $bitrate, mode: $mode, rename: $rename
+}
+
+function processfile {
+	#Extract title and episode info from metadata
+	titlename=$(ffmpeg -i "${RawFolder}/temp.${extension}" 2>&1 | grep "title  " | head -1 | cut -d":" -f2- | cut -c 2-)
+	episode=$(ffmpeg -i "${RawFolder}/temp.${extension}" 2>&1 | grep "SUMMARY " | cut -d":" -f2- | cut -c 2- | perl -pe 's/,[A-Za-z ]*?[0-9][0-9][0-9][0-9]//g')
+
+	##Some stations do not use the correct series titles. This messes up filebot. Here you can add the skewed names.
+	#Specify all individual non working series. Syntax format is:
+	#titlename="${titlename//name to replace case sensitive/new name}"
+	#E.g. titlename="${titlename//Star Trek - Das nächste Jahrhundert/Raumschiff Enterprise Das nachste Jahrhundert}"
+	titlename="${titlename//Star Trek - Das nächste Jahrhundert/Raumschiff Enterprise Das nachste Jahrhundert}"
+	titlename="${titlename//Star Trek - Deep Space Nine/Deep Space Nine}"
+	titlename="${titlename//Grey\'s Anatomy - Die jungen Ärzte/Greys Anatomy}"
+	titlename="${titlename//Criminal Intent - Verbrechen im Visier - /Criminal Intent - }"
+	titlename="${titlename//Fringe - Grenzfälle des FBI/Fringe}"
+
+	##Some stations have the bad habbit to append the genre description after the episode instead of adequately using the correct fields in metadata.
+	##The following cleans this up – as good as possible...
+	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Sitcom$//g')"
+	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Comedy$//g')"
+	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Science-Fiction-Serie$//g')"
+	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Science-Fiction$//g')"
+	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Crime-Serie$//g')"
+	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Krimi$//g')"
+	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Fantastisch$//g')"
+	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Mystery$//g')"
+	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Dramedy$//g')"
+	episode="${episode%,}"
+
+	#Generate correct file name required for filebot or manual sorting.
+	if [ $mode = "s" ]
+	then
+
+		outfile="${titlename} - ${episode}"
+
+	else
+
+		outfile="${titlename}"
+
+	fi
+
+	#Remove non-word characters from file name
+	outfile="${outfile//ä/a}"
+	outfile="${outfile//ö/o}"
+	outfile="${outfile//ü/u}"
+	outfile="${outfile//Ä/A}"
+	outfile="${outfile//Ö/O}"
+	outfile="${outfile//Ü/U}"
+	outfile="${outfile//ß/ss}"
+	outfile="${outfile//:/}"
+	outfile=$(echo "$outfile" | sed -e 's/[^A-Za-z0-9,._ -]/_/g')
+
+	#Catch if target file already exists
+	while [ -f "${RawFolder}/${outfile}.${extension}" ]; do
+		outfile="$outfile"_1
+	done
+
+	#Check if creating edl and launch comskip
+	if [ $comskip -eq 1 ]
+	then
+
+		comskip "${RawFolder}/temp.${extension}" -q --ini=$comskipINI
+
+	fi
+
+	#Check if transcoding and launch ffmpeg
+	if [[ $transcode -eq 1 ]]
+	then
+
+		#Check if all parameters are set
+		if [[ -z $decoder || -z $encoder || -z $bitrate ]]
+		then
+
+			outputlog Error while transcoding. The arguments decoder, encoder and bitrate all have to be set.
+			outputlog ffmpeg was not started.
+			outputlog Aborting...
+			outputlog
+			exit
+
+		else
+
+			#Delete any left over temp file
+			rm "${RawFolder}/temp_transcode.${extension}" 2> /dev/null
+			ffmpeg -c:v "${decoder}" -i "${RawFolder}/temp.${extension}" -c:v "${encoder}" -c:a copy -b:v "${bitrate}" "${RawFolder}/temp_transcode.${extension}"
+			if [ $? -eq 1 ]
+			then
+
+				outputlog Error while transcoding. The original video file is kept.
+				outputlog Aborting...
+				outputlog
+				exit
+
+			else
+
+				outputlog Transcoding completed successfully. The original file will be replaced.
+				rm "${RawFolder}/temp.${extension}" 2> /dev/null
+				mv "${RawFolder}/temp_transcode.${extension}" "${RawFolder}/temp.${extension}" 2> /dev/null
+
+			fi
+
+		fi
+
+	fi
+
+	#Rename temporary file(s) to matching title and episode
+	mv -n "${RawFolder}/temp.${extension}" "${RawFolder}/${outfile}.${extension}"
+	if [ $comskip -eq 1 ]
+	then
+
+		mv -n "${RawFolder}/temp.edl" "${RawFolder}/${outfile}.edl"
+
+	fi
+
+	#Check if renaming and launch filebot
+	if [[ $movefile -eq 1 ]]
+	then
+
+		if [[ $mode == "m" ]]
+		then
+
+			#rename using filebot movie mode
+			filebot --output "${outfolder}" --lang "${language}" --encoding Windows-1252 --action move --conflict skip --db TheMovieDB --q "${titlename}" -rename "${RawFolder}/${outfile}.${extension}" "${RawFolder}/${outfile}.edl" -non-strict -no-xattr --log fine --log-file "${outfolder}postscript.log" --format "${nameFormatMovie}"
+
+		else
+
+			#rename using filebot series mode
+			filebot --output "${outfolder}" --lang "${language}" --encoding Windows-1252 --action move --conflict skip --db TheTVDB --q "${titlename}" -rename "${RawFolder}/${outfile}.${extension}" "${RawFolder}/${outfile}.edl" -non-strict -no-xattr --log fine --log-file "${outfolder}postscript.log" --format "${nameFormatSeries}"
+
+		fi
+
+	fi
+
+	outputlog Finished!
+	outputlog
+}
+
+
+#Init variables
+help=0
+abort=0
+wait=0
+comskip=0
+transcode=0
+decoder=""
+encoder=""
+bitrate=""
+movefile=0
+forcerun=0
+unknown=0
+unknowncommand=""
+
+
+#Read parameters from command line
+while [ "$1" != "" ]; do
+
+    case $1 in
+
+		-i | --input )			shift
+								infile=$1
+								;;
+
+		-c | --comskip )		comskip=1
+								;;
+
+		-t | --transcode )		transcode=1
+								shift
+								decoder="$1"
+								shift
+								encoder="$1"
+								shift
+								bitrate="$1"
+								;;
+
+		-m | --movie )			mode="m"
+								;;
+
+		-s | --series )			mode="s"
+								;;
+
+		-r | --rename )			movefile=1
+								;;
+
+		-w | --wait )			wait=1
+								;;
+
+		-f | --force )			forcerun=1
+								;;
+
+		-h | --help )			help=1
+								abort=1
+								;;
+
+		* )                     help=1
+								abort=1
+								unknown=1
+								unknowncommand=$1
+    esac
+    shift
+done
+
+		if [[ $transcode -eq 1 ]] && [[ "${decoder}" == "" || "${encoder}" == "" || "${bitrate}" == "" ]]
+		then
+				
+			help=1
+			abort=1
+			unknown=1
+			unknowncommand="-t ${decoder} ${encoder} ${bitrate}"
+		fi
+
+#Start logging
+outputlog Postscript started with parameter infile = "${infile}"
+outputlog
+
+
+#######Prepare queue
+if [ "$abort" -eq 0 ]
+then
+
+	#Test if video file was set
+	if [[ "$infile" != "" ]]
+	then
+
+		#Test if queue file exists
+		if [ -f "${queuefile}" ]
+		then
+
+			#Test if queue file contains any video files (should never exist and be empty)
+			QUEUE=""
+			read -r QUEUE < "${queuefile}"
+			if [[ "$QUEUE" != "" ]]
+			then
+
+				#Test if queue file contains the infile (and do not append duplicates)
+				while read -r QUEUE || [[ -n "$QUEUE" ]]; do
+					if [[ "$QUEUE" == "${infile}" ]]; then FOUND=1; fi
+				done < "${queuefile}"
+				if [[ $FOUND -eq 1 ]]
+				then
+
+					#If video file already queued just quit.
+					outputlog Video file already queued, not adding duplicates.
+
+				else
+
+					#If video file not queued append to queue.
+					outputlog Some videos are already queued for post processing. Appending video file to queue.
+					appendfile
+
+				fi
+
+			else
+
+				#If queue is empty treat as if it wasn't present in the first place
+				appendfile
+
+			fi
+
+		else
+
+			appendfile
+
+		fi
+
+	fi
+
+
+	#Test if an error occurred
+	if [ "$abort" -eq 0 ]
+	then
+
+		#Test if set to run
+		if [ "$wait" -eq 0 ]
+		then
+
+			outputlog Start processing...
+			if [ -f "${queuefile}" ]
+			then
+
+				{ read -r QUEUE ; read -r -a QUEUE_ARRAY ; } < "${queuefile}"
+				if [[ "$QUEUE" != "" ]]
+				then
+
+					outputlog Fetched next video from queue file. Processing "$QUEUE".
+					infile="$QUEUE"
+
+					#Extract filename and path from argument
+					extension="${infile##*.}"
+					RawFolder="${infile%/*}"
+
+					#Parse Arguments from 2nd line
+					readArguments
+
+				else
+
+					outputlog No file in queue.
+					exit
+
+				fi
+
+			else
+
+				outputlog No file in queue.
+				exit
+
+
+			fi
+
+			#Does lockfile exist?
+			if [ -f "${outfolder}"postscript.lockfile ]
+			then
+
+				outputlog Previous run did not complete.
+
+				#Test if parameter forcerun is set
+				if [ $forcerun -eq 1 ]
+				then
+
+					outputlog Trying to continue left over file...
+					outputlog
+
+					#Check if a temp file is left
+					if [ -f "${RawFolder}/temp.${extension}" ]
+					then
+
+						processfile
+
+					else
+
+						outputlog ERROR! Files from unfinished run were lost.
+						outputlog Please fix "${queuefile}" manually and remove "${outfolder}"postscript.lockfile
+
+					fi
+
+				else
+
+					outputlog Exiting!
+					outputlog
+					exit
+
+				fi
+
+			else
+
+				#Check if a temp file is left
+				if [ -f "${RawFolder}/temp.${extension}" ]
+				then
+
+					outputlog ERROR! A files from unfinished run was found.
+					outputlog Please check, if the file can be removed and fix "${queuefile}" manually.
+					outputlog Aborting...
+					outputlog
+					exit
+
+				else
+
+					#Check if fetched file exists
+					if [ -f "${infile}" ]
+					then
+
+						#Move file to temporary name
+						touch "${outfolder}"postscript.lockfile
+						mv -n "${infile}" "${RawFolder}/temp.${extension}" 2> /dev/null
+						if [ $? -eq 1 ]
+						then
+
+							outputlog Cannot move video file to temporary place. Missing permission?
+							outputlog Aborting...
+							outputlog
+							exit
+
+						fi
+
+						processfile
+
+					else
+
+						outputlog Video file in queue does not exist. Skipping!
+
+					fi
+
+				fi
+
+			fi
+
+			#Remove current video file from queue
+			rm "${outfolder}"postscript.lockfile
+			sed -i -e "1,2d" "${queuefile}"
+			QUEUE=""
+			read -r QUEUE < "${queuefile}"
+			if [[ "$QUEUE" != "" ]]
+			then
+
+				eval bash $0
+
+			else
+
+				rm "${queuefile}"
+				kodi-send --action="UpdateLibrary(video)"
+				outputlog Updating Kodi video library
+
+			fi
+
+		fi
+
+	fi
+
+fi
+
+
+#Show help if requested then quit
+if [[ $help -eq 1 ]]
+then
+
+	if [[ $unknown -eq 1 ]]
+	then
+		echo ERROR! Unknown parameter: $unknowncommand
+	fi
+	echo '
+
+Usage: bash postscript.sh (options)
+Examples:
+    bash postscript.sh -i /fullpath/videoFile -c -r
+       -> Find commercials in videoFile and rename with Filebot.
+          Run immediately or add to queue if already running in another instance.
+  
+    bash postscript.sh -i /fullpath/videoFile -t mpeg2_mmal h264_omx 2000k -w
+       -> Transcode videoFile from mpeg2 to h.264 with hardware de- and
+          encoder on Raspberry Pi
+          Do not run immediately, only add to queue.
+
+    bash postscript.sh
+        -> Start queue if not running in another instance (and queue present).
+
+
+Options:
+ -h | --help     : Show help.
+
+ -i | --input    : File to process, requires full path.
+
+ -s | --series   : Series mode. Will read title and episode from metadata.
+                   Use thetvdb.com if renaming with filebot.
+				   (Default if nothing specified)
+
+ -m | --movie    : Movie mode. Will only read the title without episode.
+                   Use themoviedb.com if renaming with filebot.
+
+ -c | --comskip  : Mark commercials for automatic skipping using Comskip.
+
+ -t | --transcode: [decoder] [encoder] [bitrate]:
+                   Transcode the video to a defined codec using ffmpeg.
+                   The original file will be replaced. Requires valid
+                   decoder, encoder and bitrate. Ffmpeg and the desired
+                   codecs must be installed.
+                   E.g. --transcode mpeg2video libx264 2000k
+
+ -r | --rename	 : Rename the file to a Kodi compatibal format using filebot.
+                   Requires filebot to be installed.
+
+ -f | --forcerun : Force processing of queued videos. The whole queue
+                   will be processed and the queue file will be removed
+                   after the last video is finished.
+                   Will also attempt to resume unfinished files from
+                   previous runs.'
+
+fi
