@@ -28,6 +28,7 @@ Install ffmpeg
 sudo apt-get update
 sudo apt-get install autoconf automake build-essential libass-dev libfreetype6-dev libsdl1.2-dev libtheora-dev libtool libva-dev libvdpau-dev libvorbis-dev libxcb1-dev libxcb-shm0-dev libxcb-xfixes0-dev pkg-config texinfo zlib1g-dev yasm libx264-dev cmake mercurial libfdk-aac-dev libmp3lame-dev libopus-dev
 2) Make temporary directories for sources and building:
+mkdir $HOME/sources
 mkdir $HOME/sources/ffmpeg
 mkdir $HOME/ffmpeg_build
 3) Compile h.265 software de-/encoder
@@ -84,7 +85,7 @@ rm -R ~/sources/Comskip
 
 Install Filebot (OPTIONAL)
 (renames video files to meet the Kodi standards and move files to your library folder)
-8) Go to http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html and download the Java SDK „Linux ARM 32 Hard Float ABI“ (YES, ARM 32 even if you are on an RPi 3!) Copy it somewhere to your Pi's home folder, in the following I assume you placed it under ~/sources/JDK
+8) Go to http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html and download the Java SDK „Linux ARM 32 Hard Float ABI“ (YES, ARM 32 even if you are on an RPi 3!) Copy it somewhere to your Pi's home folder, in the following I assume you placed it under ~/sources/jdk
 
 ??? sudo apt-get install oracle-java8-jdk ???
 
@@ -93,7 +94,7 @@ cd ~/sources/jdk
 tar -zxf jdk-8u131-linux-arm32-vfp-hflt.tar.gz
 mkdir /opt/jre
 9) We are only interested in the runtime environment JRE, so we're only installing this and dump the rest
-mv ~/sources/jdk/jdk1.8_*/jre /opt/jre
+mv ~/sources/jdk/jdk1.8_131/jre /opt/jre
 sudo update-alternatives --install /usr/bin/java java /opt/jre/bin/java 100
 rm -R ~/sources/jdk
 10) Download Filebot
