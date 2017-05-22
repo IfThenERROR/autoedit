@@ -558,7 +558,7 @@ Options:
                    codecs must be installed.
                    E.g. --transcode mpeg2video libx264 2000k
 
- -r | --rename	 : Rename the file to a Kodi compatibal format using filebot.
+ -r | --rename	 : Rename the file to a Kodi compatible format using filebot.
                    Requires filebot to be installed.
 
  -f | --forcerun : Force processing of queued videos. The whole queue
