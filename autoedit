@@ -561,6 +561,8 @@ Options:
  -r | --rename	 : Rename the file to a Kodi compatible format using filebot.
                    Requires filebot to be installed.
 
+ -w | --wait	 : Do not start processing immediately, just queue the video.
+
  -f | --forcerun : Force processing of queued videos. The whole queue
                    will be processed and the queue file will be removed
                    after the last video is finished.
