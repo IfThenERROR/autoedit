@@ -1,0 +1,23 @@
+##Change personal settings here:
+#
+#Path where the processed files will be stored. Filebot will create corresponding subfolders here.
+outfolder="$HOME/TV/"
+
+#default ini file for comskip if parameter not givven
+comskipINI="$HOME/comskip.ini"
+
+##Filebot settings:
+#language
+language="de"
+
+#Naming format for series
+#Standard is "series_title (year)/season.episode_title.file_extension"
+#e.g. "Breaking Bad (2008)/S04E01.Box Cutter.mkv"
+#Including capital letters and spaces, file will be stored in the same directory
+nameFormatSeries='./{n.ascii()} ({y})/{s00e00}.{t.ascii()}'
+
+#Naming format for movies
+#Standard is "title (year)/title.file_extension"
+#e.g. "Rogue One A Star Wars Story (2016)/Rogue One A Star Wars Story.mkv"
+#Including capital letters and spaces, file will be stored in a separate movie directory
+nameFormatMovie='../Filme/{n.ascii()} ({y})/{n.ascii()}'
