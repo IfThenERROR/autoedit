@@ -112,12 +112,12 @@ chmod +x /opt/autoedit/autoedit
 sudo update-alternatives --install /usr/bin/autoedit autoedit /opt/autoedit/autoedit 100
 cp /opt/autopostscript/comskip.ini $HOME/
 nano /opt/autoedit/settings.txt
-Change the settings to your liking. Especially the outfolder and languale need to be set.
+Change the settings to your liking. Especially the outfolder and language need to be set.
 
 
 Set Cron job (OPTIONAL)
 
-11) To run all the magic overnight we cant to create a schedule. The following runs autoedit every night on 2am. Change the time as you like.
+11) To run all the magic overnight we want to create a schedule. The following runs autoedit every night on 2am. Change the time as you like.
 crontab -e
 Paste in the last line
 0 2 * * * bash -l -c autoedit
