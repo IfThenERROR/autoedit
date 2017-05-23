@@ -1,10 +1,10 @@
 ##Change personal settings here:
 #
 #Path where the processed files will be stored. Filebot will create corresponding subfolders here.
-outfolder="$HOME/TV/"
+outfolder="/home/osmc/TV/"
 
 #default ini file for comskip if parameter not givven
-comskipINI="$HOME/comskip.ini"
+comskipINI="/home/osmc/comskip.ini"
 
 ##Filebot settings:
 #language
