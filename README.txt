@@ -63,7 +63,7 @@ make -j4
 make install
 make distclean
 cd $HOME
-rm -R ~/sources/ffmpeg ~/ffmpeg_build
+rm -R --interactive=never ~/sources/ffmpeg ~/ffmpeg_build
 hash -r
 
 
@@ -80,29 +80,27 @@ cd Comskip
 make -j4
 make install
 cd $HOME
-rm -R ~/sources/Comskip
+rm -R --interactive=never ~/sources/Comskip
 
 
 Install Filebot (OPTIONAL)
 (renames video files to meet the Kodi standards and move files to your library folder)
-8) Go to http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html and download the Java SDK „Linux ARM 32 Hard Float ABI“ (YES, ARM 32 even if you are on an RPi 3!) Copy it somewhere to your Pi's home folder, in the following I assume you placed it under ~/sources/jdk
-
-??? sudo apt-get install oracle-java8-jdk ???
-
+8) Go to http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html and download the Java SDK „Linux ARM 32 Hard Float ABI“ (YES, ARM 32 even if you are on an RPi 3!) Take note of the Version no. which you'll need later. In this example it is 8u131 Copy it somewhere to your Pi's home folder (using Samba, FTP, it doesn't matter). In the following I assume you placed it under ~/sources/jdk
 mkdir ~/sources/jdk
 cd ~/sources/jdk
 tar -zxf jdk-8u131-linux-arm32-vfp-hflt.tar.gz
 mkdir /opt/jre
-9) We are only interested in the runtime environment JRE, so we're only installing this and dump the rest
-mv ~/sources/jdk/jdk1.8_131/jre /opt/jre
+9) We are only interested in the runtime environment JRE, so we're only installing this and dump the rest. Note that the directory contains the version no. You have to adjust this with the one you wrote down.
+mv ~/sources/jdk/jdk1.8.0_131/jre /opt
 sudo update-alternatives --install /usr/bin/java java /opt/jre/bin/java 100
-rm -R ~/sources/jdk
+rm -R --interactive=never ~/sources/jdk
 10) Download Filebot
 mkdir ~/sources/filebot
 cd ~/sources/filebot
 wget https://downloads.sourceforge.net/project/filebot/filebot/FileBot_4.7.9/filebot_4.7.9_armhf.deb
-sudo dpkg -i ~/sources/filebot/filebot.deb
-rm -R ~/sources/filebot
+sudo dpkg -i ~/sources/filebot/filebot_4.7.9_armhf.deb
+cd ~
+rm -R --interactive=never ~/sources/filebot
 
 
 Install Autoedit
@@ -130,22 +128,23 @@ Check if everything works
 
 11) Now let's test all the installed parts.
 java -version
-Should output xxxxxxx
+Should output „Java(TM) SE Runtime Environment (build 1.8.0_***-***)“
 
-ffmpeg --encoders | grep omx
-Should output xxxxxxx
+
+ffmpeg -encoders | grep omx
+Should output „V..... h264_omx             OpenMAX IL H.264 video encoder (codec h264)“
 
 comskip
-Should output xxxxxxx
+Should output „ComSkip: missing option <file>“
 
 autoedit --help
-Should output xxxxxxx
+Should output „Usage: bash postscript.sh (options) …“
 
 Tadaaaaa! Everything is ready.
 
 
 Installation:
-Now let's hook up autoedit in TVHeadend. Open a browser and go to the TVHeadend interface (http://your_RPi_IP:9981). Go to Configuration→Recording→Profiles and in the (Default Profile) set „Tag with metadata“. In the field for „Post-Processor Command“ enter autoedit --input "%f" --comskip --transcode mpeg2_mmal h264_omx 1800k --rename --wait“
+Now let's hook up autoedit in TVHeadend. Open a browser and go to the TVHeadend interface (http://your_RPi_IP:9981). Go to Configuration→Recording and in the (Default Profile) set „Tag with metadata“. In the field for „Post-Processor Command“ enter autoedit --input "%f" --comskip --transcode mpeg2_mmal h264_omx 1800k --rename --wait“
 
 --input : This is the file to process, %f makes TVHeadend deliver the full path.
 --comskip : Marks commercials for automatic skipping using Comskip.
@@ -153,11 +152,11 @@ Now let's hook up autoedit in TVHeadend. Open a browser and go to the TVHeadend 
 --rename : Rename the file to a Kodi compatible format using filebot.
 --wait : Do not start processing immediately, just queue the video.
 
-Also create a seccond profile for movies as filebot can't reliably distinguish between movies and series. All settings here are the same as above, but „Post-Processor Command“ is „Post-Processor Command“ enter autoedit --input "%f" --comskip --transcode mpeg2_mmal h264_omx 1800k --rename --movie --wait“
+Also create a seccond profile for movies as filebot can't reliably distinguish between movies and series. All settings here are the same as above, but „Post-Processor Command“ is „Post-Processor Command“ enter „autoedit --input "%f" --comskip --transcode mpeg2_mmal h264_omx 1800k --rename --movie --wait“
 
 
 Caveats:
-Quite many TV networks suck big time in properly labeling their broadcasts. They add fancy additions to series' titles, don't use the correct fields in the metadata and generally mess things up a lot. I wrote the postscript as robust as possible, and tried to remove the most common junk. But still sometimes the tags are just too messed up. So it doesn't hurt to check your recording folder and the postscript's log some here and then. If you regularly have problems with a series you can edit the script. The corresponding code is somewhere around line 100.
-Your video directory in the settings.txt may not contain blank spaces as Comskip is not able to handle these.
-Also Comskip is currently not capable of decoding in hardware on the little Raspberry. So running on HD videos is kinda slow.
-If your system crashed not all is lost. Again the script is designed to be robust. You can resume an interupted run by entering „autoedit --forcerun“. This will try to pick up where it left.
+– Quite many TV networks suck big time in properly labeling their broadcasts. They add fancy additions to series' titles, don't use the correct fields in the metadata and generally mess things up a lot. I wrote the postscript as robust as possible, and tried to remove the most common junk. But still sometimes the tags are just too messed up. So it doesn't hurt to check your recording folder and the postscript's log some here and then. If you regularly have problems with a series you can edit the script. The corresponding code is somewhere around line 100.
+– Your video directory in the settings.txt may not contain blank spaces as Comskip is not able to handle these.
+– Also Comskip is currently not capable of decoding in hardware on the little Raspberry. So running on HD videos is kinda slow.
+– If your system crashed not all is lost. Again the script is designed to be robust. You can resume an interupted run by entering „autoedit --forcerun“. This will try to pick up where it left.
