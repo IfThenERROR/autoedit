@@ -20,7 +20,9 @@ function outputlog {
 function appendfile {
 	postscriptparams=""
 	if [ $comskip -eq 1 ]; then postscriptparams="${postscriptparams} -c"; fi
-	if [ $transcode -eq 1 ]; then postscriptparams="${postscriptparams} -t ${decoder} ${encoder} ${bitrate}"; fi
+	if [ $comskip -eq 1 ]; then postscriptparams="${postscriptparams} -t ${title}"; fi
+	if [ $comskip -eq 1 ]; then postscriptparams="${postscriptparams} -e ${episode}"; fi
+	if [ $transcode -eq 1 ]; then postscriptparams="${postscriptparams} -tc ${decoder} ${encoder} ${bitrate}"; fi
 	if [ $movefile -eq 1 ]; then postscriptparams="${postscriptparams} -r"; fi
 	if [[ $mode = "m" ]]
 	then
@@ -50,6 +52,8 @@ function appendfile {
 
 function readArguments {
 	mode="s"
+	title=""
+	episode=""
 	comskip=0
 	transcode=0
 	decoder=""
@@ -68,7 +72,18 @@ function readArguments {
 			-c | --comskip )		comskip=1
 									;;
 
-			-t | --transcode )		transcode=1
+			-t | --title )			(( i++ ))
+									title="${QUEUE_ARRAY[i]}"
+									;;
+
+			-e | --episode )		(( i++ ))
+									episode="${QUEUE_ARRAY[i]}"
+									;;
+
+			-c | --comskip )		comskip=1
+									;;
+
+			-tc | --transcode )		transcode=1
 									(( i++ ))
 									decoder="${QUEUE_ARRAY[i]}"
 									(( i++ ))
@@ -83,7 +98,7 @@ function readArguments {
 			-s | --series )			mode="s"
 									;;
 
-			-r | --rename )			movefile=1
+			-r | --rename )			rename=1
 									;;
 
 			* )                     unknown=1
@@ -101,13 +116,22 @@ function readArguments {
 
 	done
 
-outputlog infile: $infile, comskip: $comskip, transcode: $transcode, decoder: $decoder, encoder: $encoder, bitrate: $bitrate, mode: $mode, rename: $rename
 }
 
 function processfile {
 	#Extract title and episode info from metadata
-	titlename=$(ffmpeg -i "${RawFolder}/temp.${extension}" 2>&1 | grep "title  " | head -1 | cut -d":" -f2- | cut -c 2-)
-	episode=$(ffmpeg -i "${RawFolder}/temp.${extension}" 2>&1 | grep "SUMMARY " | cut -d":" -f2- | cut -c 2- | perl -pe 's/,[A-Za-z ]*?[0-9][0-9][0-9][0-9]//g')
+	if [[ "${titlename}" == "" ]]
+	then
+
+		titlename=$(ffmpeg -i "${RawFolder}/temp.${extension}" 2>&1 | grep "title  " | head -1 | cut -d":" -f2- | cut -c 2-)
+
+	fi
+	if [[ "${episode}" == "" ]]
+	then
+
+		episode=$(ffmpeg -i "${RawFolder}/temp.${extension}" 2>&1 | grep "SUMMARY " | cut -d":" -f2- | cut -c 2- | perl -pe 's/,[A-Za-z ]*?[0-9][0-9][0-9][0-9]//g')
+
+	fi
 
 	##Some stations do not use the correct series titles. This messes up filebot. Here you can add the skewed names.
 	#Specify all individual non working series. Syntax format is:
@@ -267,7 +291,15 @@ while [ "$1" != "" ]; do
 		-c | --comskip )		comskip=1
 								;;
 
-		-t | --transcode )		transcode=1
+		-t | --title )			shift
+								title=$1
+								;;
+
+		-e | --episode )		shift
+								episode=$1
+								;;
+
+		-tc | --transcode )		transcode=1
 								shift
 								decoder="$1"
 								shift
@@ -540,7 +572,13 @@ Examples:
 Options:
  -h | --help     : Show help.
 
- -i | --input    : File to process, requires full path.
+ -i | --input FILE : File to process, requires full path.
+
+ -t | --title MANUAL_TITLE:
+                   Override title from metadata with MANUAL_TITLE.
+
+ -e | --episode MANUAL_EPISODE:
+                   Override episode name from metadata with MANUAL_EPISODE.
 
  -s | --series   : Series mode. Will read title and episode from metadata.
                    Use thetvdb.com if renaming with filebot.
@@ -551,10 +589,10 @@ Options:
 
  -c | --comskip  : Mark commercials for automatic skipping using Comskip.
 
- -t | --transcode: [decoder] [encoder] [bitrate]:
+ -tc | --transcode DECODER ENCODER BITRATE:
                    Transcode the video to a defined codec using ffmpeg.
                    The original file will be replaced. Requires valid
-                   decoder, encoder and bitrate. Ffmpeg and the desired
+                   DECODER, ENCODER and BITRATE. Ffmpeg and the desired
                    codecs must be installed.
                    E.g. --transcode mpeg2video libx264 2000k
 
