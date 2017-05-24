@@ -144,15 +144,17 @@ Tadaaaaa! Everything is ready.
 
 
 Installation:
-Now let's hook up autoedit in TVHeadend. Open a browser and go to the TVHeadend interface (http://your_RPi_IP:9981). Go to Configuration→Recording and in the (Default Profile) set „Tag with metadata“. In the field for „Post-Processor Command“ enter autoedit --input "%f" --comskip --transcode mpeg2_mmal h264_omx 1800k --rename --wait“
+Now let's hook up autoedit in TVHeadend. Open a browser and go to the TVHeadend interface (http://your_RPi_IP:9981). Go to Configuration→Recording and in the (Default Profile). In the field for „Post-Processor Command“ enter autoedit --input "%f" --title "%t" --episode "%d" --comskip --transcode mpeg2_mmal h264_omx 1800k --rename --wait“
 
 --input : This is the file to process, %f makes TVHeadend deliver the full path.
+--title : Use this for series title. If not set autoedit will try to read the title from the metadata.
+--episode : Use this for episode name. If not set autoedit will try to read the episode from the description in the metadata.
 --comskip : Marks commercials for automatic skipping using Comskip.
 --transcode [decoder] [encoder] [bitrate]: Transcodes the video using ffmpeg. The sample above does de- and encoding in RPi's hardware and hence is pretty fast. For SD videos it's near 90 fps. Make sure you use the correct settings here.
 --rename : Rename the file to a Kodi compatible format using filebot.
 --wait : Do not start processing immediately, just queue the video.
 
-Also create a seccond profile for movies as filebot can't reliably distinguish between movies and series. All settings here are the same as above, but „Post-Processor Command“ is „Post-Processor Command“ enter „autoedit --input "%f" --comskip --transcode mpeg2_mmal h264_omx 1800k --rename --movie --wait“
+Also create a seccond profile for movies as filebot can't reliably distinguish between movies and series. All settings here are the same as above, but „Post-Processor Command“ is „Post-Processor Command“ enter „autoedit --input "%f" --title "%t" --comskip --transcode mpeg2_mmal h264_omx 1800k --rename --movie --wait“
 
 
 Caveats:
