@@ -19,9 +19,11 @@ function outputlog {
 
 function appendfile {
 	postscriptparams=""
+	titlename="${titlename// /_}"
+	episode="${episode// /_}"
 	if [ $comskip -eq 1 ]; then postscriptparams="${postscriptparams} -c"; fi
-	if [ $comskip -eq 1 ]; then postscriptparams="${postscriptparams} -t ${title}"; fi
-	if [ $comskip -eq 1 ]; then postscriptparams="${postscriptparams} -e ${episode}"; fi
+	if [[ $titlename != "" ]]; then postscriptparams="${postscriptparams} -t ${titlename}"; fi
+	if [[ $episode != "" ]]; then postscriptparams="${postscriptparams} -e ${episode}"; fi
 	if [ $transcode -eq 1 ]; then postscriptparams="${postscriptparams} -tc ${decoder} ${encoder} ${bitrate}"; fi
 	if [ $movefile -eq 1 ]; then postscriptparams="${postscriptparams} -r"; fi
 	if [[ $mode = "m" ]]
@@ -52,7 +54,7 @@ function appendfile {
 
 function readArguments {
 	mode="s"
-	title=""
+	titlename=""
 	episode=""
 	comskip=0
 	transcode=0
@@ -73,7 +75,7 @@ function readArguments {
 									;;
 
 			-t | --title )			(( i++ ))
-									title="${QUEUE_ARRAY[i]}"
+									titlename="${QUEUE_ARRAY[i]}"
 									;;
 
 			-e | --episode )		(( i++ ))
@@ -98,7 +100,7 @@ function readArguments {
 			-s | --series )			mode="s"
 									;;
 
-			-r | --rename )			rename=1
+			-r | --rename )			movefile=1
 									;;
 
 			* )                     unknown=1
@@ -248,12 +250,12 @@ function processfile {
 		then
 
 			#rename using filebot movie mode
-			filebot --output "${outfolder}" --lang "${language}" --encoding Windows-1252 --action move --conflict skip --db TheMovieDB --q "${titlename}" -rename "${RawFolder}/${outfile}.${extension}" "${RawFolder}/${outfile}.edl" -non-strict -no-xattr --log fine --log-file "${outfolder}postscript.log" --format "${nameFormatMovie}"
+			filebot --output "${outfolder}" --lang "${language}" --encoding Windows-1252 --action move --conflict fail --db TheMovieDB --q "${titlename}" -rename "${RawFolder}/${outfile}.${extension}" "${RawFolder}/${outfile}.edl" -non-strict -no-xattr --log fine --log-file "${outfolder}postscript.log" --format "${nameFormatMovie}"
 
 		else
 
 			#rename using filebot series mode
-			filebot --output "${outfolder}" --lang "${language}" --encoding Windows-1252 --action move --conflict skip --db TheTVDB --q "${titlename}" -rename "${RawFolder}/${outfile}.${extension}" "${RawFolder}/${outfile}.edl" -non-strict -no-xattr --log fine --log-file "${outfolder}postscript.log" --format "${nameFormatSeries}"
+			filebot --output "${outfolder}" --lang "${language}" --encoding Windows-1252 --action move --conflict fail --db TheTVDB --q "${titlename}" -rename "${RawFolder}/${outfile}.${extension}" "${RawFolder}/${outfile}.edl" -non-strict -no-xattr --log fine --log-file "${outfolder}postscript.log" --format "${nameFormatSeries}"
 
 		fi
 
@@ -292,7 +294,7 @@ while [ "$1" != "" ]; do
 								;;
 
 		-t | --title )			shift
-								title=$1
+								titlename=$1
 								;;
 
 		-e | --episode )		shift
