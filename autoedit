@@ -132,6 +132,8 @@ function processfile {
 	then
 
 		episode=$(ffmpeg -i "${RawFolder}/temp.${extension}" 2>&1 | grep "SUMMARY " | cut -d":" -f2- | cut -c 2- | perl -pe 's/,[A-Za-z ]*?[0-9][0-9][0-9][0-9]//g')
+		episode="${episode// /_}"
+
 
 	fi
 
@@ -139,23 +141,23 @@ function processfile {
 	#Specify all individual non working series. Syntax format is:
 	#titlename="${titlename//name to replace case sensitive/new name}"
 	#E.g. titlename="${titlename//Star Trek - Das nächste Jahrhundert/Raumschiff Enterprise Das nachste Jahrhundert}"
-	titlename="${titlename//Star Trek - Das nächste Jahrhundert/Raumschiff Enterprise Das nachste Jahrhundert}"
-	titlename="${titlename//Star Trek - Deep Space Nine/Deep Space Nine}"
-	titlename="${titlename//Grey\'s Anatomy - Die jungen Ärzte/Greys Anatomy}"
-	titlename="${titlename//Criminal Intent - Verbrechen im Visier - /Criminal Intent - }"
-	titlename="${titlename//Fringe - Grenzfälle des FBI/Fringe}"
+	titlename="${titlename//Star_Trek_-_Das_nächste_Jahrhundert/Raumschiff Enterprise Das nachste Jahrhundert}"
+	titlename="${titlename//Star_Trek_-_Deep_Space_Nine/Deep Space Nine}"
+	titlename="${titlename//Grey\'s_Anatomy_-_Die_jungen_Ärzte/Greys Anatomy}"
+	titlename="${titlename//Criminal_Intent_-_Verbrechen_im_Visier_-_/Criminal Intent - }"
+	titlename="${titlename//Fringe_-_Grenzfälle_des_FBI/Fringe}"
 
 	##Some stations have the bad habbit to append the genre description after the episode instead of adequately using the correct fields in metadata.
 	##The following cleans this up – as good as possible...
-	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Sitcom$//g')"
-	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Comedy$//g')"
-	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Science-Fiction-Serie$//g')"
-	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Science-Fiction$//g')"
-	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Crime-Serie$//g')"
-	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Krimi$//g')"
-	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Fantastisch$//g')"
-	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Mystery$//g')"
-	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Dramedy$//g')"
+	episode="$(echo "${episode}" 2>&1 | perl -pe 's/_Sitcom$//g')"
+	episode="$(echo "${episode}" 2>&1 | perl -pe 's/_Comedy$//g')"
+	episode="$(echo "${episode}" 2>&1 | perl -pe 's/_Science-Fiction-Serie$//g')"
+	episode="$(echo "${episode}" 2>&1 | perl -pe 's/_Science-Fiction$//g')"
+	episode="$(echo "${episode}" 2>&1 | perl -pe 's/_Crime-Serie$//g')"
+	episode="$(echo "${episode}" 2>&1 | perl -pe 's/_Krimi$//g')"
+	episode="$(echo "${episode}" 2>&1 | perl -pe 's/_Fantastisch$//g')"
+	episode="$(echo "${episode}" 2>&1 | perl -pe 's/_Mystery$//g')"
+	episode="$(echo "${episode}" 2>&1 | perl -pe 's/_Dramedy$//g')"
 	episode="${episode%,}"
 
 	#Generate correct file name required for filebot or manual sorting.
