@@ -120,8 +120,8 @@ Change the settings to your liking. Especially the outfolder and language need t
 
 Set Cron job (OPTIONAL)
 
+11) To run all the magic overnight we want to create a schedule. The following runs autoedit every night on 2am. Change the time as you like.
 ```
-# 11) To run all the magic overnight we want to create a schedule. The following runs autoedit every night on 2am. Change the time as you like.
 crontab -e
 ```
 Paste in the last line
@@ -134,7 +134,7 @@ Hit Ctrl+o and Ctrl+x to save.
 
 #### Check if everything works
 
-11) Now let's test all the installed parts.
+12) Now let's test all the installed parts.
 ```
 java -version
 ```
@@ -154,7 +154,7 @@ Should output `ComSkip: missing option <file>`
 autoedit --help
 ```
 Should output `Usage: bash postscript.sh (options) …`
-```
+
 
 #### Tadaaaaa! Everything is ready.
 
