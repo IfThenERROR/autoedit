@@ -166,11 +166,17 @@ Now let's hook up autoedit in TVHeadend. Open a browser and go to the TVHeadend 
 ```
 
 --input : This is the file to process, %f makes TVHeadend deliver the full path.
+
 --title : Use this for series title. If not set autoedit will try to read the title from the metadata if present.
+
 --episode : Use this for episode name. If not set autoedit will try to read the episode from the description in the metadata.
+
 --comskip : Marks commercials for automatic skipping using Comskip.
+
 --transcode [decoder] [encoder] [bitrate]: Transcodes the video using ffmpeg. The sample above does de- and encoding in RPi's hardware and hence is pretty fast but only medium quality. For SD videos it's near 90 fps. Make sure you use the correct settings here.
+
 --rename : Rename the file to a Kodi compatible format using filebot.
+
 --wait : Do not start processing immediately, just queue the video.
 
 Also create a seccond profile for movies as filebot can't reliably distinguish between movies and series. All settings here are the same as above, but „Post-Processor Command“ is „Post-Processor Command“ enter:
