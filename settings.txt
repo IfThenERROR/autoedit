@@ -8,7 +8,7 @@ comskipINI="/home/osmc/comskip.ini"
 
 ##Filebot settings:
 #language
-language="de"
+language="en"
 
 #Naming format for series
 #Standard is "series_title (year)/season.episode_title.file_extension"
