@@ -2,38 +2,29 @@
 
 source "$(dirname "$(readlink -f "$0")")"/settings.txt
 
-#General settings
-#–––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
-
-#Log file
-postscriptlog="${outfolder}"postscript.log
-
-#Queue file
-queuefile="${outfolder}"postscriptQueue.txt
-
-#–––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
-
 function outputlog {
-	echo $(date '+%d.%m.%Y %H:%M:%S') : "$@" >> "${postscriptlog}"
+	echo $(date '+%d.%m.%Y %H:%M:%S') : "$@" >> "${autoeditlog}"
 }
 
 function appendfile {
-	postscriptparams=""
+	autoeditparams=""
 	titlename="${titlename// /_}"
+	titlename="${titlename//__/_}"
 	episode="${episode// /_}"
-	if [ $comskip -eq 1 ]; then postscriptparams="${postscriptparams} -c"; fi
-	if [[ $titlename != "" ]]; then postscriptparams="${postscriptparams} -t ${titlename}"; fi
-	if [[ $episode != "" ]]; then postscriptparams="${postscriptparams} -e ${episode}"; fi
-	if [ $transcode -eq 1 ]; then postscriptparams="${postscriptparams} -tc ${decoder} ${encoder} ${bitrate}"; fi
-	if [ $movefile -eq 1 ]; then postscriptparams="${postscriptparams} -r"; fi
+	episode="${episode//__/_}"
+	if [ $comskip -eq 1 ]; then autoeditparams="${autoeditparams} -c"; fi
+	if [[ $titlename != "" ]]; then autoeditparams="${autoeditparams} -t ${titlename}"; fi
+	if [[ $episode != "" ]]; then autoeditparams="${autoeditparams} -e ${episode}"; fi
+	if [ $transcode -eq 1 ]; then autoeditparams="${autoeditparams} -tc ${decoder} ${encoder} ${bitrate}"; fi
+	if [ $movefile -eq 1 ]; then autoeditparams="${autoeditparams} -r"; fi
 	if [[ $mode = "m" ]]
 	then
-		postscriptparams="${postscriptparams} -m"
+		autoeditparams="${autoeditparams} -m"
 	fi
-	if [[ $mode = "s" ]]; then postscriptparams="${postscriptparams} -s"; fi
+	if [[ $mode = "s" ]]; then autoeditparams="${autoeditparams} -s"; fi
 
 	echo "${infile}" >> "${queuefile}"
-	echo "${postscriptparams}" >> "${queuefile}"
+	echo "${autoeditparams}" >> "${queuefile}"
 
 	#Catch write errors
 	if [ $? -eq 1 ]
@@ -141,11 +132,11 @@ function processfile {
 	#Specify all individual non working series. Syntax format is:
 	#titlename="${titlename//name to replace case sensitive/new name}"
 	#E.g. titlename="${titlename//Star Trek - Das nächste Jahrhundert/Raumschiff Enterprise Das nachste Jahrhundert}"
-	titlename="${titlename//Star_Trek_-_Das_nächste_Jahrhundert/Raumschiff Enterprise Das nachste Jahrhundert}"
+	titlename="${titlename//Star_Trek_-_Das_n_chste_Jahrhundert/Raumschiff Enterprise Das nachste Jahrhundert}"
 	titlename="${titlename//Star_Trek_-_Deep_Space_Nine/Deep Space Nine}"
-	titlename="${titlename//Grey\'s_Anatomy_-_Die_jungen_Ärzte/Greys Anatomy}"
+	titlename="${titlename//Grey\'s_Anatomy_-_Die_jungen_rzte/Greys Anatomy}"
 	titlename="${titlename//Criminal_Intent_-_Verbrechen_im_Visier_-_/Criminal Intent - }"
-	titlename="${titlename//Fringe_-_Grenzfälle_des_FBI/Fringe}"
+	titlename="${titlename//Fringe_-_Grenzf_lle_des_FBI/Fringe}"
 
 	##Some stations have the bad habbit to append the genre description after the episode instead of adequately using the correct fields in metadata.
 	##The following cleans this up – as good as possible...
@@ -252,12 +243,12 @@ function processfile {
 		then
 
 			#rename using filebot movie mode
-			filebot --output "${outfolder}" --lang "${language}" --encoding Windows-1252 --action move --conflict fail --db TheMovieDB --q "${titlename}" -rename "${RawFolder}/${outfile}.${extension}" "${RawFolder}/${outfile}.edl" -non-strict -no-xattr --log fine --log-file "${outfolder}postscript.log" --format "${nameFormatMovie}"
+			filebot --output "${outfolder}" --lang "${language}" --encoding Windows-1252 --action move --conflict fail --db TheMovieDB --q "${titlename}" -rename "${RawFolder}/${outfile}.${extension}" "${RawFolder}/${outfile}.edl" -non-strict -no-xattr --log fine --log-file "${autoeditlog}" --format "${nameFormatMovie}"
 
 		else
 
 			#rename using filebot series mode
-			filebot --output "${outfolder}" --lang "${language}" --encoding Windows-1252 --action move --conflict fail --db TheTVDB --q "${titlename}" -rename "${RawFolder}/${outfile}.${extension}" "${RawFolder}/${outfile}.edl" -non-strict -no-xattr --log fine --log-file "${outfolder}postscript.log" --format "${nameFormatSeries}"
+			filebot --output "${outfolder}" --lang "${language}" --encoding Windows-1252 --action move --conflict fail --db TheTVDB --q "${titlename}" -rename "${RawFolder}/${outfile}.${extension}" "${RawFolder}/${outfile}.edl" -non-strict -no-xattr --log fine --log-file "${autoeditlog}" --format "${nameFormatSeries}"
 
 		fi
 
@@ -349,8 +340,7 @@ done
 		fi
 
 #Start logging
-outputlog Postscript started with parameter infile = "${infile}"
-outputlog
+outputlog Autoedit started with parameter infile = "${infile}"
 
 
 #######Prepare queue
@@ -414,6 +404,7 @@ then
 		then
 
 			outputlog Start processing...
+			outputlog
 			if [ -f "${queuefile}" ]
 			then
 
@@ -447,7 +438,7 @@ then
 			fi
 
 			#Does lockfile exist?
-			if [ -f "${outfolder}"postscript.lockfile ]
+			if [ -f "${outfolder}"autoedit.lockfile ]
 			then
 
 				outputlog Previous run did not complete.
@@ -468,7 +459,7 @@ then
 					else
 
 						outputlog ERROR! Files from unfinished run were lost.
-						outputlog Please fix "${queuefile}" manually and remove "${outfolder}"postscript.lockfile
+						outputlog Please fix "${queuefile}" manually and remove "${outfolder}"autoedit.lockfile
 
 					fi
 
@@ -499,7 +490,7 @@ then
 					then
 
 						#Move file to temporary name
-						touch "${outfolder}"postscript.lockfile
+						touch "${outfolder}"autoedit.lockfile
 						mv -n "${infile}" "${RawFolder}/temp.${extension}" 2> /dev/null
 						if [ $? -eq 1 ]
 						then
@@ -524,7 +515,7 @@ then
 			fi
 
 			#Remove current video file from queue
-			rm "${outfolder}"postscript.lockfile
+			rm "${outfolder}"autoedit.lockfile
 			sed -i -e "1,2d" "${queuefile}"
 			QUEUE=""
 			read -r QUEUE < "${queuefile}"
@@ -558,18 +549,18 @@ then
 	fi
 	echo '
 
-Usage: bash postscript.sh (options)
+Usage: autoedit (options)
 Examples:
-    bash postscript.sh -i /fullpath/videoFile -c -r
+    bash autoedit -i /fullpath/videoFile -c -r
        -> Find commercials in videoFile and rename with Filebot.
           Run immediately or add to queue if already running in another instance.
   
-    bash postscript.sh -i /fullpath/videoFile -t mpeg2_mmal h264_omx 2000k -w
+    bash autoedit -i /fullpath/videoFile -t mpeg2_mmal h264_omx 2000k -w
        -> Transcode videoFile from mpeg2 to h.264 with hardware de- and
           encoder on Raspberry Pi
           Do not run immediately, only add to queue.
 
-    bash postscript.sh
+    bash autoedit
         -> Start queue if not running in another instance (and queue present).
 
 
