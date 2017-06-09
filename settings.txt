@@ -21,3 +21,15 @@ nameFormatSeries='./{n.ascii()} ({y})/{s00e00}.{t.ascii()}'
 #e.g. "Rogue One A Star Wars Story (2016)/Rogue One A Star Wars Story.mkv"
 #Including capital letters and spaces, file will be stored in a separate movie directory
 nameFormatMovie='../Filme/{n.ascii()} ({y})/{n.ascii()}'
+
+
+#General settings
+#–––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+
+#Log file
+autoeditlog="${outfolder}"autoedit.log
+
+#Queue file
+queuefile="${outfolder}"autoeditQueue.txt
+
+#–––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
