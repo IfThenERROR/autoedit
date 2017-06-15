@@ -116,7 +116,7 @@ function processfile {
 	if [[ "${titlename}" == "" ]]
 	then
 
-		titlename=$(ffmpeg -i "${RawFolder}/temp.${extension}" 2>&1 | grep "title  " | head -1 | cut -d":" -f2- | cut -c 2-)
+		titlename=$(ffmpeg -i "${RawFolder}/temp.${extension}" 2>&1 | grep " title  " | head -1 | cut -d":" -f2- | cut -c 2-)
 
 	fi
 	if [[ "${episode}" == "" ]]
@@ -527,6 +527,7 @@ then
 			else
 
 				rm "${queuefile}"
+				kodi-send --action="CleanLibrary(video)"
 				kodi-send --action="UpdateLibrary(video)"
 				outputlog Updating Kodi video library
 
