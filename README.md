@@ -59,7 +59,7 @@ cd $HOME/sources/ffmpeg
 wget http://ffmpeg.org/releases/ffmpeg-snapshot.tar.bz2
 tar xjvf ffmpeg-snapshot.tar.bz2
 cd ffmpeg
-PKG_CONFIG_PATH="$HOME/ffmpeg_build/lib/pkgconfig" ./configure --prefix="$HOME/ffmpeg_build" --pkg-config-flags="--static" --extra-cflags="-I$HOME/ffmpeg_build/include" --extra-ldflags="-L$HOME/ffmpeg_build/lib" --bindir="$HOME/programs/ffmpeg" --enable-gpl --enable-libass --enable-libfdk-aac --enable-libfreetype --enable-libmp3lame --enable-libopus --enable-libtheora --enable-libvorbis --enable-libvpx --enable-libx264 --enable-libx265 --enable-nonfree --enable-mmal --enable-omx-rpi --disable-debug
+PKG_CONFIG_PATH="$HOME/ffmpeg_build/lib/pkgconfig" ./configure --pkg-config-flags="--static" --enable-gpl --enable-libass --enable-libfdk-aac --enable-libfreetype --enable-libmp3lame --enable-libopus --enable-libtheora --enable-libvorbis --enable-libvpx --enable-libx264 --enable-libx265 --enable-nonfree --enable-mmal  --enable-decoder=mpeg2_mmal --enable-decoder=mpeg4_mmal --enable-decoder=h264_mmal --enable-decoder=vc1_mmal --enable-omx-rpi --enable-encoder=h264_omx
 make -j4
 make install
 make distclean
@@ -75,7 +75,7 @@ hash -r
 # 7) Install dependencies:
 cd $HOME/sources
 sudo apt-get install libargtable2-dev
-git clone git://github.com/erikkaashoek/Comskip
+git clone git://github.com/IfThenERROR/Comskip
 cd Comskip
 ./autogen.sh
 ./configure
@@ -188,5 +188,5 @@ Also create a seccond profile for movies as filebot can't reliably distinguish b
 ### Known issues:
 - Quite many TV networks suck big time in properly labeling their broadcasts. They add fancy additions to series' titles, don't use the correct fields in the metadata and generally mess things up a lot. I wrote the postscript as robust as possible, and tried to remove the most common junk. But still sometimes the tags are just too messed up. So it doesn't hurt to check your recording folder and the postscript's log some here and then. If you regularly have problems with a series you can edit the script. The corresponding code is somewhere around line 100.
 - Your video directory in the settings.txt may not contain blank spaces as Comskip is not able to handle these.
-- Also Comskip is currently not capable of decoding in hardware on the little Raspberry. So running on HD videos is kinda slow.
+- Also if Comskip is set to decode in hardware, the little Raspberry is to busy to play a video smoothly at the same time. So either turn of hardware decoding in the comskip.ini, or set the script to run nightly with cron.
 - If your system crashed not all is lost. Again the script is designed to be robust. You can resume an interupted run by entering „autoedit --forcerun“. This will try to pick up where it left.
