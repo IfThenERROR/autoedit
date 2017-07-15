@@ -528,6 +528,7 @@ then
 
 				rm "${queuefile}"
 				kodi-send --action="CleanLibrary(video)"
+				sleep 1m
 				kodi-send --action="UpdateLibrary(video)"
 				outputlog Updating Kodi video library
 
