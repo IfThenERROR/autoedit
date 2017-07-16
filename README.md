@@ -59,6 +59,8 @@ cd $HOME/sources/ffmpeg
 wget http://ffmpeg.org/releases/ffmpeg-snapshot.tar.bz2
 tar xjvf ffmpeg-snapshot.tar.bz2
 cd ffmpeg
+export LDFLAGS="-L/opt/vc/lib -L/opt/vc/lib/pkgconfig -L/opt/vc/lib/plugins"
+export CPPFLAGS='-I/opt/vc/include'
 PKG_CONFIG_PATH="$HOME/ffmpeg_build/lib/pkgconfig" ./configure --pkg-config-flags="--static" --enable-gpl --enable-libass --enable-libfdk-aac --enable-libfreetype --enable-libmp3lame --enable-libopus --enable-libtheora --enable-libvorbis --enable-libvpx --enable-libx264 --enable-libx265 --enable-nonfree --enable-mmal  --enable-decoder=mpeg2_mmal --enable-decoder=mpeg4_mmal --enable-decoder=h264_mmal --enable-decoder=vc1_mmal --enable-omx-rpi --enable-encoder=h264_omx
 make -j4
 make install
