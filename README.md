@@ -27,9 +27,9 @@ If you are not interested in one certain feature of my script you can just skip 
 ```
 # 1) Make temporary directories for sources and building:
 mkdir $HOME/sources
-# 2) Install ffmpeg standard package
+# 2) Install ffmpeg standard package and dev libraries
 sudo apt-get update
-sudo apt-get install ffmpeg
+sudo apt-get install ffmpeg libavcodec-dev libavformat-dev libavutil-dev
 ```
 
 **_DEPRECATED!_ Only on Debian 8 "Jessie" and earlier:**
@@ -89,7 +89,7 @@ sudo apt-get install autoconf automake git libargtable2-dev libtool
 git clone git://github.com/erikkaashoek/Comskip
 cd Comskip
 ./autogen.sh
-PKG_CONFIG_PATH="/usr/lib/arm-linux-gnueabihf" ./configure
+./configure
 make -j4
 make install
 cd $HOME
