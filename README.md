@@ -91,7 +91,7 @@ cd Comskip
 ./autogen.sh
 ./configure
 make -j4
-make install
+sudo make install
 cd $HOME
 rm -R --interactive=never $HOME/sources/Comskip
 ```
@@ -102,9 +102,9 @@ rm -R --interactive=never $HOME/sources/Comskip
 ```
 cd $HOME/sources/jdk
 tar -zxf jdk-8u131-linux-arm32-vfp-hflt.tar.gz
-mkdir /opt/jre
+sudo mkdir /opt/jre
 # 9) We are only interested in the runtime environment JRE, so we're only installing this and dump the rest. Note that the directory contains the version no. You have to adjust this with the one you wrote down.
-mv $HOME/sources/jdk/jdk1.8.0_131/jre /opt
+sudo mv $HOME/sources/jdk/jdk1.8.0_131/jre /opt
 sudo update-alternatives --install /usr/bin/java java /opt/jre/bin/java 100
 rm -R --interactive=never $HOME/sources/jdk
 # 10) Download Filebot
@@ -164,7 +164,7 @@ Should output `ComSkip: missing option <file>`
 ```
 autoedit --help
 ```
-Should output `Usage: bash postscript.sh (options) …`
+Should output `Usage: bash autoedit (options) …`
 
 
 #### Tadaaaaa! Everything is ready.
