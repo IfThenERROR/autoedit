@@ -86,10 +86,10 @@ hash -r
 # 7) Install dependencies:
 cd $HOME/sources
 sudo apt-get install autoconf automake git libargtable2-dev libtool
-git clone git://github.com/IfThenERROR/Comskip
+git clone git://github.com/erikkaashoek/Comskip
 cd Comskip
 ./autogen.sh
-./configure
+PKG_CONFIG_PATH="/usr/lib/arm-linux-gnueabihf" ./configure
 make -j4
 make install
 cd $HOME
