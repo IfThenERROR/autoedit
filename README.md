@@ -23,12 +23,12 @@ This tutorial is supposed to be for everybody who is interested in an automated 
 If you are not interested in one certain feature of my script you can just skip the corresponding steps. All optional components are marked so. Otherwise follow the instructions closely. For the impatient you can simply copy everything from the blue boxes to the command line.
 
 #### Install ffmpeg
-###On Debian 9 "Stretch":
+On Debian 9 "Stretch":
 ```
 sudo apt-get install ffmpeg
 ```
 
-### <b>DEPRECATED</b> Only on Debian 8 "Jessie" and earlier:
+DEPRECATED! Only on Debian 8 "Jessie" and earlier:
 ```
 # 1) Install dependencies:
 sudo apt-get update
