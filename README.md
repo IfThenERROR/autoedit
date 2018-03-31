@@ -23,12 +23,16 @@ This tutorial is supposed to be for everybody who is interested in an automated 
 If you are not interested in one certain feature of my script you can just skip the corresponding steps. All optional components are marked so. Otherwise follow the instructions closely. For the impatient you can simply copy everything from the blue boxes to the command line.
 
 #### Install ffmpeg
-On Debian 9 "Stretch":
+**On Debian 9 "Stretch":**
 ```
+# 1) Make temporary directories for sources and building:
+mkdir $HOME/sources
+# 2) Install ffmpeg standard package
+sudo apt-get update
 sudo apt-get install ffmpeg
 ```
 
-DEPRECATED! Only on Debian 8 "Jessie" and earlier:
+**_DEPRECATED!_ Only on Debian 8 "Jessie" and earlier:**
 ```
 # 1) Install dependencies:
 sudo apt-get update
@@ -81,7 +85,7 @@ hash -r
 ```
 # 7) Install dependencies:
 cd $HOME/sources
-sudo apt-get install libargtable2-dev
+sudo apt-get install autoconf automake git libargtable2-dev libtool
 git clone git://github.com/IfThenERROR/Comskip
 cd Comskip
 ./autogen.sh
@@ -194,6 +198,7 @@ Also create a seccond profile for movies as filebot can't reliably distinguish b
 
 ### Known issues:
 - Quite many TV networks suck big time in properly labeling their broadcasts. They add fancy additions to series' titles, don't use the correct fields in the metadata and generally mess things up a lot. I wrote the postscript as robust as possible, and tried to remove the most common junk. But still sometimes the tags are just too messed up. So it doesn't hurt to check your recording folder and the postscript's log some here and then. If you regularly have problems with a series you can edit the script. The corresponding code is somewhere around line 100.
-- Your video directory in the settings.txt may not contain blank spaces as Comskip is not able to handle these.
-- Also if Comskip is set to decode in hardware, the little Raspberry is to busy to play a video smoothly at the same time. So either turn of hardware decoding in the comskip.ini, or set the script to run nightly with cron.
+- Your video directory in the settings.txt **should** not contain blank spaces as Comskip is officially not able to handle these. It seems to still work, but is not thoroughly tested.
+- Also if Comskip is set to decode in hardware, the little Raspberry is to busy to play a video smoothly at the same time. So Either turn of hardware decoding in the comskip.ini, or set the script to run nightly with cron.
+- The standard package in Debian Stretch does not contain the h.265 decoder. If you wish to process videos with this compression, you need to resort to building ffmpeg from source. In this case refer to the instructions for Debian Jessie.
 - If your system crashed not all is lost. Again the script is designed to be robust. You can resume an interupted run by entering „autoedit --forcerun“. This will try to pick up where it left.
