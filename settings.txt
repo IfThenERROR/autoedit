@@ -14,13 +14,13 @@ language="en"
 #Standard is "series_title (year)/season.episode_title.file_extension"
 #e.g. "Breaking Bad (2008)/S04E01.Box Cutter.mkv"
 #Including capital letters and spaces, file will be stored in the same directory
-nameFormatSeries='./{n.ascii().replaceAll(/[?]+$/).tr(':','_').tr('*','_').tr('|','_')} ({y})/{s00e00}.{t.ascii().replaceAll(/[?]+$/).tr(':','_').tr('*','_').tr('|','_')}'
+nameFormatSeries='./{n.ascii().replaceAll(/[?]+$/).tr("–","_").tr("*","_").tr("|",("_")} ({y})/{s00e00}.{t.ascii().replaceAll(/[?]+$/).tr(":","_").tr("*","_").tr("|","_")}'
 
 #Naming format for movies
 #Standard is "title (year)/title.file_extension"
 #e.g. "Rogue One A Star Wars Story (2016)/Rogue One A Star Wars Story.mkv"
 #Including capital letters and spaces, file will be stored in a separate movie directory
-nameFormatMovie='../movies/{n.ascii().replaceAll(/[?]+$/).tr(':','_').tr('*','_').tr('|','_')} ({y})/{n.ascii().replaceAll(/[?]+$/).tr(':','_').tr('*','_').tr('|','_')}'
+nameFormatMovie='../movies/{n.ascii().replaceAll(/[?]+$/).tr(":","_").tr("*","_").tr("|","_")} ({y})/{n.ascii().replaceAll(/[?]+$/).tr(":","_").tr("*","_").tr("|","_")}'
 
 
 #General settings
