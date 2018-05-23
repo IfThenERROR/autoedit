@@ -3,7 +3,7 @@
 source "$(dirname "$(readlink -f "$0")")"/settings.txt
 
 function outputlog {
-	echo $(date '+%d.%m.%Y %H:%M:%S') : "$@" >> "${autoeditlog}"
+	echo "$(date '+%d.%m.%Y %H:%M:%S')" : "$@" >> "${autoeditlog}"
 }
 
 function appendfile {
@@ -16,9 +16,9 @@ function appendfile {
 	if [[ $titlename != "" ]]; then autoeditparams="${autoeditparams} -t ${titlename}"; fi
 	if [[ $episode != "" ]]; then autoeditparams="${autoeditparams} -e ${episode}"; fi
 	if [ $transcode -eq 1 ]; then autoeditparams="${autoeditparams} -tc ${decoder} ${encoder} ${bitrate}"; fi
+	if [ $transcodeexternal -eq 1 ]; then autoeditparams="${autoeditparams} -tx ${txqueue}"; fi
 	if [ $movefile -eq 1 ]; then autoeditparams="${autoeditparams} -r"; fi
-	if [[ $mode = "m" ]]
-	then
+	if [[ $mode = "m" ]]; then
 		autoeditparams="${autoeditparams} -m"
 	fi
 	if [[ $mode = "s" ]]; then autoeditparams="${autoeditparams} -s"; fi
@@ -27,10 +27,9 @@ function appendfile {
 	echo "${autoeditparams}" >> "${queuefile}"
 
 	#Catch write errors
-	if [ $? -eq 1 ]
-	then
+	if [ $? -eq 1 ]; then
 
-		outputlog Unable to create file in ${outfolder}! Missing permission?
+		outputlog Unable to create file in "${outfolder}"! Missing permission?
 		outputlog Aborting...
 		abort=1
 		return 1
@@ -49,10 +48,14 @@ function readArguments {
 	episode=""
 	comskip=0
 	transcode=0
+	transcodeexternal=0
+	txqueue=""
 	decoder=""
 	encoder=""
 	bitrate=""
 	movefile=0
+	update=0
+	unset KODI_ARRAY
 	unknown=0
 	unknowncommand=""
 
@@ -73,9 +76,6 @@ function readArguments {
 									episode="${QUEUE_ARRAY[i]}"
 									;;
 
-			-c | --comskip )		comskip=1
-									;;
-
 			-tc | --transcode )		transcode=1
 									(( i++ ))
 									decoder="${QUEUE_ARRAY[i]}"
@@ -83,6 +83,11 @@ function readArguments {
 									encoder="${QUEUE_ARRAY[i]}"
 									(( i++ ))
 									bitrate="${QUEUE_ARRAY[i]}"
+									;;
+
+			-tx | --transcodeexternal )		transcodeexternal=1
+									shift
+									txqueue="$1"
 									;;
 
 			-m | --movie )			mode="m"
@@ -94,12 +99,21 @@ function readArguments {
 			-r | --rename )			movefile=1
 									;;
 
+			-u | --update )			update=1
+									(( i++ ))
+									j=0
+									while [[ ! "${QUEUE_ARRAY[i]}" == "-"* ]] && [[ ! "${QUEUE_ARRAY[i]}" == "" ]]; do
+										KODI_ARRAY[j]="${QUEUE_ARRAY[i]}"
+										(( i++ ))
+										(( j++ ))
+									done
+									;;
+
 			* )                     unknown=1
 									unknowncommand="${QUEUE_ARRAY[i]}"
 		esac
 
-		if [[ $transcode -eq 1 ]] && [[ "${decoder}" == "" || "${encoder}" == "" || "${bitrate}" == "" ]]
-		then
+		if [[ $transcode -eq 1 ]] && [[ "${decoder}" == "" || "${encoder}" == "" || "${bitrate}" == "" ]]; then
 		
 			outputlog Error reading parameters for queued files. Settings for transcoding are incomplete.
 			outputlog Aborting...
@@ -113,17 +127,15 @@ function readArguments {
 
 function processfile {
 	#Extract title and episode info from metadata
-	if [[ "${titlename}" == "" ]]
-	then
+	if [[ "${titlename}" == "" ]]; then
 
 		titlename=$(ffmpeg -i "${RawFolder}/temp.${extension}" 2>&1 | grep " title  " | head -1 | cut -d":" -f2- | cut -c 2-)
 
 	fi
-	if [[ "${episode}" == "" ]]
-	then
+	if [[ "${episode}" == "" ]]; then
 
 		episode=$(ffmpeg -i "${RawFolder}/temp.${extension}" 2>&1 | grep "SUMMARY " | cut -d":" -f2- | cut -c 2- | cut -d" " -f-6 | perl -pe 's/,[A-Za-z ]*?[0-9][0-9][0-9][0-9]//g')
-		episode="${episode// /_}"
+		#episode="${episode// /_}"
 
 
 	fi
@@ -144,7 +156,7 @@ function processfile {
 	episode="$(echo "${episode}" 2>&1 | perl -pe 's/_Comedy$//g')"
 	episode="$(echo "${episode}" 2>&1 | perl -pe 's/_Science-Fiction-Serie$//g')"
 	episode="$(echo "${episode}" 2>&1 | perl -pe 's/_Science-Fiction$//g')"
-	episode="$(echo "${episode}" 2>&1 | perl -pe 's/_Crime-Serie$//g')"
+	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Crime-Serie$//g')"
 	episode="$(echo "${episode}" 2>&1 | perl -pe 's/_Krimi$//g')"
 	episode="$(echo "${episode}" 2>&1 | perl -pe 's/_Fantastisch$//g')"
 	episode="$(echo "${episode}" 2>&1 | perl -pe 's/_Mystery$//g')"
@@ -152,8 +164,7 @@ function processfile {
 	episode="${episode%,}"
 
 	#Generate correct file name required for filebot or manual sorting.
-	if [ $mode = "s" ]
-	then
+	if [ $mode = "s" ]; then
 
 		outfile="${titlename} - ${episode}"
 
@@ -180,20 +191,17 @@ function processfile {
 	done
 
 	#Check if creating edl and launch comskip
-	if [ $comskip -eq 1 ]
-	then
+	if [ $comskip -eq 1 ]; then
 
-		comskip "${RawFolder}/temp.${extension}" -q --ini=$comskipINI
+		comskip "${RawFolder}/temp.${extension}" -q --ini="$comskipINI"
 
 	fi
 
 	#Check if transcoding and launch ffmpeg
-	if [[ $transcode -eq 1 ]]
-	then
+	if [[ $transcode -eq 1 ]]; then
 
 		#Check if all parameters are set
-		if [[ -z $decoder || -z $encoder || -z $bitrate ]]
-		then
+		if [[ -z $decoder || -z $encoder || -z $bitrate ]]; then
 
 			outputlog Error while transcoding. The arguments decoder, encoder and bitrate all have to be set.
 			outputlog ffmpeg was not started.
@@ -206,8 +214,7 @@ function processfile {
 			#Delete any left over temp file
 			rm "${RawFolder}/temp_transcode.${extension}" 2> /dev/null
 			ffmpeg -c:v "${decoder}" -i "${RawFolder}/temp.${extension}" -c:v "${encoder}" -c:a copy -b:v "${bitrate}" "${RawFolder}/temp_transcode.${extension}"
-			if [ $? -eq 1 ]
-			then
+			if [ $? -eq 1 ]; then
 
 				outputlog Error while transcoding. The original video file is kept.
 				outputlog Aborting...
@@ -228,29 +235,114 @@ function processfile {
 
 	#Rename temporary file(s) to matching title and episode
 	mv -n "${RawFolder}/temp.${extension}" "${RawFolder}/${outfile}.${extension}"
-	if [ $comskip -eq 1 ]
-	then
+	if [ $comskip -eq 1 ]; then
 
 		mv -n "${RawFolder}/temp.edl" "${RawFolder}/${outfile}.edl"
 
 	fi
 
 	#Check if renaming and launch filebot
-	if [[ $movefile -eq 1 ]]
-	then
+	if [[ $movefile -eq 1 ]]; then
 
-		if [[ $mode == "m" ]]
-		then
+		if [[ $mode == "m" ]]; then
 
 			#rename using filebot movie mode
-			filebot --output "${outfolder}" --lang "${language}" --encoding Windows-1252 --action move --conflict fail --db TheMovieDB --q "${titlename}" -rename "${RawFolder}/${outfile}.${extension}" "${RawFolder}/${outfile}.edl" -non-strict -no-xattr --log fine --log-file "${autoeditlog}" --format "${nameFormatMovie}"
+			filebot --output "${outfolder}" --lang "${language}" --encoding Windows-1252 --action test --conflict fail --db TheMovieDB --q "${titlename}" -rename "${RawFolder}/${outfile}.${extension}" "${RawFolder}/${outfile}.edl" -non-strict -no-xattr --log fine --log-file "/tmp/autoedit_temp.txt" --format "${nameFormatMovie}"
 
 		else
 
 			#rename using filebot series mode
-			filebot --output "${outfolder}" --lang "${language}" --encoding Windows-1252 --action move --conflict fail --db TheTVDB --q "${titlename}" -rename "${RawFolder}/${outfile}.${extension}" "${RawFolder}/${outfile}.edl" -non-strict -no-xattr --log fine --log-file "${autoeditlog}" --format "${nameFormatSeries}"
+			filebot --output "${outfolder}" --lang "${language}" --encoding Windows-1252 --action test --conflict fail --db TheTVDB --q "${titlename}" -rename "${RawFolder}/${outfile}.${extension}" "${RawFolder}/${outfile}.edl" -non-strict -no-xattr --log fine --log-file "/tmp/autoedit_temp.txt" --format "${nameFormatSeries}"
 
 		fi
+	
+		#If not found in Database move to error directory
+		if [[ $(grep "Failed to fetch" "/tmp/autoedit_temp.txt") != "" ]]; then
+
+			#Create directory if not existant
+			if [ ! -d "${RawFolder}/Error-NotInDatabase" ]; then
+				mkdir "${RawFolder}/Error-NotInDatabase"
+			fi
+			mv -n "${RawFolder}/${outfile}.${extension}" "${RawFolder}/Error-NotInDatabase/${outfile}.${extension}"
+			if [ -f "${RawFolder}/${outfile}.edl" ]; then
+				mv -n "${RawFolder}/${outfile}.edl" "${RawFolder}/Error-NotInDatabase/${outfile}.edl"
+			fi
+			outputlog Failed to rename file: Not found in online database
+				
+		#If video or edl present move to duplicates directory
+		elif [[ $(grep "File already exists" "/tmp/autoedit_temp.txt") != "" ]]; then
+
+			#Create directory if not existant
+			if [ ! -d "${RawFolder}/Error-Duplicates" ]; then
+
+				mkdir "${RawFolder}/Error-Duplicates"
+
+			fi
+			target=$(grep "\[TEST\] From.*${extension}\]$" "/tmp/autoedit_temp.txt")
+			newfile="${outfile}"
+			if [[ "${target}" != "" ]]; then
+
+				target="$(echo $target | cut -d" " -f3- | cut -d"[" -f3 | cut -d"]" -f1)"
+				newfile="${target%/*}"
+				newfile="${newfile##*/}"
+				newfile="${newfile} - "$(basename "${target}" ."${extension}")
+
+			fi
+
+			#Catch if file already in duplicates directory
+			while [ -f "${RawFolder}/Error-Duplicates/${newfile}.${extension}" ]; do
+
+				newfile="$newfile"_1
+
+			done
+			mv -n "${RawFolder}/${outfile}.${extension}" "${RawFolder}/Error-Duplicates/${newfile}.${extension}"
+			if [ -f "${RawFolder}/${outfile}.edl" ]; then
+
+				mv -n "${RawFolder}/${outfile}.edl" "${RawFolder}/Error-Duplicates/${newfile}.edl"
+
+			fi
+			outputlog Video was already in the library. Files were moved to "${RawFolder}/Error-Duplicates/${outfile}.${extension}"
+		
+		#If no error move file to new directory
+		elif [[ $(grep "Processed " "/tmp/autoedit_temp.txt") != "" ]] && [[ $(grep "Failure" "/tmp/autoedit_temp.txt") == "" ]]; then
+
+			target=$(grep "\[TEST\] From.*${extension}\]$" "/tmp/autoedit_temp.txt")
+			target="$(echo $target | cut -d" " -f3- | cut -d"[" -f3 | cut -d"]" -f1)"
+			if [ ! -d "${target%/*}" ]; then
+
+				mkdir "${target%/*}"
+
+			fi
+			mv -n "${RawFolder}/${outfile}.${extension}" "${target}"
+			mv -n "${RawFolder}/${outfile}.edl" "${target%\.*}.edl"
+			outputlog Files moved to "${target}"
+			RawFolder="${target%/*}"
+			outfile=$(basename "${target}" ."${extension}")
+
+			#Check if external transcoding and add to queue
+			if [[ $transcodeexternal -eq 1 ]]; then
+
+				echo "${RawFolder}/${outfile}.${extension}"
+				echo "${txqueue}"
+				"${RawFolder}/${outfile}.${extension}" >> "${txqueue}"
+				outputlog Added "${RawFolder}/${outfile}.${extension}" for external transcoding.
+
+			fi
+
+		#Unexpected error
+		else
+			outputlog Unexpected error while renaming. Aborting!
+		fi
+		
+		rm -f /tmp/autoedit_temp.txt
+
+	fi
+
+	#Check if external transcoding and add to queue
+	if [[ $transcodeexternal -eq 1 ]] && [[ $movefile -eq 0 ]]; then
+
+		"${RawFolder}/${outfile}.${extension}" >> "${txqueue}"
+		outputlog Added "${RawFolder}/${outfile}.${extension}" for external transcoding.
 
 	fi
 
@@ -265,10 +357,14 @@ abort=0
 wait=0
 comskip=0
 transcode=0
+transcodeexternal=0
+txqueue=""
 decoder=""
 encoder=""
 bitrate=""
 movefile=0
+update=0
+unset KODI_ARRAY
 forcerun=0
 unknown=0
 unknowncommand=""
@@ -303,6 +399,11 @@ while [ "$1" != "" ]; do
 								bitrate="$1"
 								;;
 
+		-tx | --transcodeexternal )		transcodeexternal=1
+								shift
+								txqueue="$1"
+								;;
+
 		-m | --movie )			mode="m"
 								;;
 
@@ -322,6 +423,16 @@ while [ "$1" != "" ]; do
 								abort=1
 								;;
 
+		-u | --update )			update=1
+								shift
+								j=0
+								while [[ ! "$1" == "-"* ]] && [[ ! "$1" == "" ]]; do
+									KODI_ARRAY[j]="$1"
+									shift
+									(( j++ ))
+								done
+								;;
+
 		* )                     help=1
 								abort=1
 								unknown=1
@@ -330,14 +441,24 @@ while [ "$1" != "" ]; do
     shift
 done
 
-		if [[ $transcode -eq 1 ]] && [[ "${decoder}" == "" || "${encoder}" == "" || "${bitrate}" == "" ]]
-		then
-				
-			help=1
-			abort=1
-			unknown=1
-			unknowncommand="-t ${decoder} ${encoder} ${bitrate}"
-		fi
+	if [[ $transcode -eq 1 ]] && [[ "${decoder}" == "" || "${encoder}" == "" || "${bitrate}" == "" ]]; then
+
+		help=1
+		abort=1
+		unknown=1
+		unknowncommand="-t ${decoder} ${encoder} ${bitrate}"
+
+	fi
+
+	if [[ $transcode -eq 1 ]] && [[ transcodeexternal -eq 1 ]]; then
+
+		help=1
+		abort=1
+		unknown=1
+		unknowncommand="ERROR: Internal and external transcoding may not be used at the same time"
+
+	fi
+
 
 #Start logging
 outputlog Autoedit started with parameter infile = "${infile}"
@@ -348,25 +469,21 @@ if [ "$abort" -eq 0 ]
 then
 
 	#Test if video file was set
-	if [[ "$infile" != "" ]]
-	then
+	if [[ "$infile" != "" ]]; then
 
 		#Test if queue file exists
-		if [ -f "${queuefile}" ]
-		then
+		if [ -f "${queuefile}" ]; then
 
 			#Test if queue file contains any video files (should never exist and be empty)
 			QUEUE=""
 			read -r QUEUE < "${queuefile}"
-			if [[ "$QUEUE" != "" ]]
-			then
+			if [[ "$QUEUE" != "" ]]; then
 
 				#Test if queue file contains the infile (and do not append duplicates)
 				while read -r QUEUE || [[ -n "$QUEUE" ]]; do
 					if [[ "$QUEUE" == "${infile}" ]]; then FOUND=1; fi
 				done < "${queuefile}"
-				if [[ $FOUND -eq 1 ]]
-				then
+				if [[ $FOUND -eq 1 ]]; then
 
 					#If video file already queued just quit.
 					outputlog Video file already queued, not adding duplicates.
@@ -396,21 +513,17 @@ then
 
 
 	#Test if an error occurred
-	if [ "$abort" -eq 0 ]
-	then
+	if [ "$abort" -eq 0 ]; then
 
 		#Test if set to run
-		if [ "$wait" -eq 0 ]
-		then
+		if [ "$wait" -eq 0 ]; then
 
 			outputlog Start processing...
 			outputlog
-			if [ -f "${queuefile}" ]
-			then
+			if [ -f "${queuefile}" ]; then
 
 				{ read -r QUEUE ; read -r -a QUEUE_ARRAY ; } < "${queuefile}"
-				if [[ "$QUEUE" != "" ]]
-				then
+				if [[ "$QUEUE" != "" ]]; then
 
 					outputlog Fetched next video from queue file. Processing "$QUEUE".
 					infile="$QUEUE"
@@ -438,28 +551,25 @@ then
 			fi
 
 			#Does lockfile exist?
-			if [ -f "${outfolder}"autoedit.lockfile ]
-			then
+			if [ -f "${outfolder}"/autoedit.lockfile ]; then
 
 				outputlog Previous run did not complete.
 
 				#Test if parameter forcerun is set
-				if [ $forcerun -eq 1 ]
-				then
+				if [ $forcerun -eq 1 ]; then
 
 					outputlog Trying to continue left over file...
 					outputlog
 
 					#Check if a temp file is left
-					if [ -f "${RawFolder}/temp.${extension}" ]
-					then
+					if [ -f "${RawFolder}/temp.${extension}" ]; then
 
 						processfile
 
 					else
 
 						outputlog ERROR! Files from unfinished run were lost.
-						outputlog Please fix "${queuefile}" manually and remove "${outfolder}"autoedit.lockfile
+						outputlog Please fix "${queuefile}" manually and remove "${outfolder}"/autoedit.lockfile
 
 					fi
 
@@ -474,8 +584,7 @@ then
 			else
 
 				#Check if a temp file is left
-				if [ -f "${RawFolder}/temp.${extension}" ]
-				then
+				if [ -f "${RawFolder}/temp.${extension}" ]; then
 
 					outputlog ERROR! A files from unfinished run was found.
 					outputlog Please check, if the file can be removed and fix "${queuefile}" manually.
@@ -486,14 +595,12 @@ then
 				else
 
 					#Check if fetched file exists
-					if [ -f "${infile}" ]
-					then
+					if [ -f "${infile}" ]; then
 
 						#Move file to temporary name
-						touch "${outfolder}"autoedit.lockfile
+						touch "${outfolder}"/autoedit.lockfile
 						mv -n "${infile}" "${RawFolder}/temp.${extension}" 2> /dev/null
-						if [ $? -eq 1 ]
-						then
+						if [ $? -eq 1 ]; then
 
 							outputlog Cannot move video file to temporary place. Missing permission?
 							outputlog Aborting...
@@ -515,23 +622,35 @@ then
 			fi
 
 			#Remove current video file from queue
-			rm "${outfolder}"autoedit.lockfile
+			rm "${outfolder}"/autoedit.lockfile
 			sed -i -e "1,2d" "${queuefile}"
 			QUEUE=""
 			read -r QUEUE < "${queuefile}"
-			if [[ "$QUEUE" != "" ]]
-			then
+			if [[ "$QUEUE" != "" ]]; then
 
-				eval bash $0
+				eval bash '$0'
 
 			else
 
 				rm "${queuefile}"
-				kodi-send --action="CleanLibrary(video)"
-				sleep 1m
-				kodi-send --action="UpdateLibrary(video)"
-				outputlog Updating Kodi video library
+				
+				#Update video library
+				if [[ "$update" -eq 1 ]]; then
+					#Clean library first
+					for i in "${!KODI_ARRAY[@]}"; do
+						curl --data-binary '{ "jsonrpc": "2.0", "method": "VideoLibrary.Clean"}' -H 'content-type: application/json;' http://"${KODI_ARRAY[i]}":8080/jsonrpc
+					done
+				
+					#Wait 5 minutes as Kodi does not respond when done and cannot clean and update the library at the same time
+					sleep 5m
 
+					#Then update library
+					for i in "${!KODI_ARRAY[@]}"; do
+						curl --data-binary '{ "jsonrpc": "2.0", "method": "VideoLibrary.Scan"}' -H 'content-type: application/json;' http://"${KODI_ARRAY[i]}":8080/jsonrpc
+						outputlog Updating Kodi video library for client "${KODI_ARRAY[i]}"
+					done
+
+				fi
 			fi
 
 		fi
@@ -545,24 +664,23 @@ fi
 if [[ $help -eq 1 ]]
 then
 
-	if [[ $unknown -eq 1 ]]
-	then
-		echo ERROR! Unknown parameter: $unknowncommand
+	if [[ $unknown -eq 1 ]]; then
+		echo ERROR! Unknown parameter: "$unknowncommand"
 	fi
 	echo '
 
 Usage: autoedit (options)
 Examples:
-    bash autoedit -i /fullpath/videoFile -c -r
+    /usr/bin/autoedit -i /fullpath/videoFile -c -r
        -> Find commercials in videoFile and rename with Filebot.
           Run immediately or add to queue if already running in another instance.
   
-    bash autoedit -i /fullpath/videoFile -t mpeg2_mmal h264_omx 2000k -w
+    /usr/bin/autoedit -i /fullpath/videoFile -t mpeg2_mmal h264_omx 2000k -w
        -> Transcode videoFile from mpeg2 to h.264 with hardware de- and
           encoder on Raspberry Pi
           Do not run immediately, only add to queue.
 
-    bash autoedit
+    /usr/bin/autoedit
         -> Start queue if not running in another instance (and queue present).
 
 
@@ -593,8 +711,16 @@ Options:
                    codecs must be installed.
                    E.g. --transcode mpeg2video libx264 2000k
 
+ -tx | --transcodeexternal QUEUE_FILE:
+                   Add the processed video file with full path into QUEUE_FILE
+				   for transcoding with an external program (and possibly
+				   on another computer).
+
  -r | --rename	 : Rename the file to a Kodi compatible format using filebot.
                    Requires filebot to be installed.
+
+ -u | --update LIST_OF_KODI_CLIENTS :
+				   Will remotely update the video library for all listed clients.
 
  -w | --wait	 : Do not start processing immediately, just queue the video.
 
