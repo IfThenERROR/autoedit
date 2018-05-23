@@ -1,4 +1,4 @@
-## autoedit
+## autoedit v 1.1.01
 ### A script to turn Kodi with TVHeadend into a fully automated DVR
 
 Turn your system into a fully automated TV recorder. It's supposed to just work without further interaction with the end users (wife and kids). In fact they should not even notice anything is happening in the background. The system should just silently do it's task, record all the favorite series and movies, remove all the advertising junk, convert everything to a decently compressed format and cleanly add every recording to the movie or series library.
@@ -24,6 +24,7 @@ If you are not interested in one certain feature of my script you can just skip 
 
 #### Install ffmpeg
 **On Debian 9 "Stretch":**
+Please note that the default Debian package of ffmpeg does not support the RPi's hardware video decoder. This usually is no problem as long as you are not interested in transcoding. Otherwise you need to build ffmpeg from source – please refer to the section below:
 ```
 # 1) Make temporary directories for sources and building:
 mkdir $HOME/sources
@@ -32,7 +33,7 @@ sudo apt-get update
 sudo apt-get install ffmpeg libavcodec-dev libavformat-dev libavutil-dev
 ```
 
-**_DEPRECATED!_ Only on Debian 8 "Jessie" and earlier:**
+**_DEPRECATED!_ Build ffmpeg from source (only needed on Debian 8 "Jessie" and earlier):**
 ```
 # 1) Install dependencies:
 sudo apt-get update
@@ -131,13 +132,13 @@ Change the settings to your liking. Especially the outfolder and language need t
 
 Set Cron job (OPTIONAL)
 
-11) To run all the magic overnight we want to create a schedule. The following runs autoedit every night on 2am. Change the time as you like.
+11) To run all the magic overnight we want to create a schedule. The following runs autoedit every night on 4am. Change the time as you like.
 ```
 crontab -e
 ```
 Paste in the last line
 ```
-0 2 * * * bash -l -c autoedit
+0 4 * * * bash -l -c nice -n 19 autoedit
 ```
 Hit Ctrl+o and Ctrl+x to save.
 
@@ -173,32 +174,38 @@ Should output `Usage: bash autoedit (options) …`
 ### Configure TVHeadend:
 Now let's hook up autoedit in TVHeadend. Open a browser and go to the TVHeadend interface (http://your_RPi_IP:9981). Go to Configuration→Recording and in the (Default Profile). In the field for „Post-Processor Command“ enter:
 ```
-/usr/bin/autoedit --input "%f" --title "%t" --comskip --transcode mpeg2_mmal h264_omx 2000k --rename --wait
+/usr/bin/autoedit --input "%f" --title "%t" --episode "%s" --comskip --transcodeexternal "/path/to/list/for/external/transcoder(optional)" --rename --wait --update IP-Address-to-Kodi
 ```
 
---input : This is the file to process, %f makes TVHeadend deliver the full path.
-
---title : Use this for series title. If not set autoedit will try to read the title from the metadata if present.
-
---episode : Use this for episode name. If not set autoedit will try to read the episode from the description in the metadata.
+--input [video file]: This is the file to process, %f makes TVHeadend deliver the full path.
 
 --comskip : Marks commercials for automatic skipping using Comskip.
 
+--rename : Rename the file to a Kodi compatible format using filebot.
+
+--movie : Switch filebot to movie database. (Default is tv series database)
+
+--title [name]: Use this for series title. If not set autoedit will try to read the title from the metadata if present.
+
+--episode [name]: Use this for episode name. If not set autoedit will try to read the episode from the description in the metadata.
+
 --transcode [decoder] [encoder] [bitrate]: Transcodes the video using ffmpeg. The sample above does de- and encoding in RPi's hardware and hence is pretty fast but only medium quality. For SD videos it's near 90 fps. Make sure you use the correct settings here.
 
---rename : Rename the file to a Kodi compatible format using filebot.
+--transcodeexternal [file]: Add the resulting video file to the specified list.
 
 --wait : Do not start processing immediately, just queue the video.
 
-Also create a seccond profile for movies as filebot can't reliably distinguish between movies and series. All settings here are the same as above, but „Post-Processor Command“ is „Post-Processor Command“ enter:
+--update [IP address1] [IP address2] [IP addressN]: Send remote commands to specified Kodi clients to update the video library.
+
+Also create a seccond profile for movies as filebot can't reliably distinguish between movies and series. All settings here are the same as above, but with '--movie' added.
 ```
-/usr/bin/autoedit --input "%f" --title "%t" --comskip --transcode mpeg2_mmal h264_omx 2000k --rename --movie --wait
+/usr/bin/autoedit --input "%f" --title "%t" --episode "%s" --comskip --transcodeexternal "/path/to/list/for/external/transcoder(optional)" --movie --rename --wait --update IP-Address-to-Kodi
 ```
 
 
 ### Known issues:
-- Quite many TV networks suck big time in properly labeling their broadcasts. They add fancy additions to series' titles, don't use the correct fields in the metadata and generally mess things up a lot. I wrote the postscript as robust as possible, and tried to remove the most common junk. But still sometimes the tags are just too messed up. So it doesn't hurt to check your recording folder and the postscript's log some here and then. If you regularly have problems with a series you can edit the script. The corresponding code is somewhere around line 100.
-- Your video directory in the settings.txt **should** not contain blank spaces as Comskip is officially not able to handle these. It seems to still work, but is not thoroughly tested.
-- Also if Comskip is set to decode in hardware, the little Raspberry is to busy to play a video smoothly at the same time. So Either turn of hardware decoding in the comskip.ini, or set the script to run nightly with cron.
-- The standard package in Debian Stretch does not contain the h.265 decoder. If you wish to process videos with this compression, you need to resort to building ffmpeg from source. In this case refer to the instructions for Debian Jessie.
-- If your system crashed not all is lost. Again the script is designed to be robust. You can resume an interupted run by entering „autoedit --forcerun“. This will try to pick up where it left.
+- Quite many TV networks suck big time in properly labeling their broadcasts. They add fancy additions to series' titles, don't use the correct fields in the metadata, add additional spaces where they don't belong and generally mess things up a lot. I wrote the postscript as robust as possible, and tried to remove the most common junk. But still sometimes the tags are just too messed up. So it doesn't hurt to check your recording folder and the postscript's log some here and then. If you regularly have problems with a series you can edit the script. The corresponding code is around line 150.
+- Your video directory in the settings.txt **should** not contain blank spaces as Comskip is officially not able to handle these. My personal tests seem to indicate it actually can do though, but no guarantees.
+- Also if Comskip is set to decode in hardware, the little Raspberry is to busy to play a video smoothly at the same time. So either turn of hardware decoding in the comskip.ini, or set the script to run nightly with cron.
+- The standard package in Debian Stretch does not contain the h.265 decoder. If you wish to process videos with this compression, you need to resort to building ffmpeg from source.
+- If your system crashed not all is lost. The script is designed to be robust. You can resume an interupted run by entering „autoedit --forcerun“. This will try to pick up where it left and in most cases will work just fine. Be carefull to not start more than one instance of the script though.

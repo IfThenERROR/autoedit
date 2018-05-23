@@ -1,4 +1,5 @@
 #! /bin/bash
+#v 1.1.01
 
 source "$(dirname "$(readlink -f "$0")")"/settings.txt
 
@@ -345,13 +346,11 @@ function processfile {
 		outputlog Added "${RawFolder}/${outfile}.${extension}" for external transcoding.
 
 	fi
-
-	outputlog Finished!
-	outputlog
 }
 
 
 #Init variables
+arguments=""
 help=0
 abort=0
 wait=0
@@ -371,6 +370,7 @@ unknowncommand=""
 
 
 #Read parameters from command line
+arguments=("$@")
 while [ "$1" != "" ]; do
 
     case $1 in
@@ -461,7 +461,7 @@ done
 
 
 #Start logging
-outputlog Autoedit started with parameter infile = "${infile}"
+outputlog Autoedit started with parameters "$arguments"
 
 
 #######Prepare queue
@@ -651,6 +651,10 @@ then
 					done
 
 				fi
+
+				outputlog Complete!
+				outputlog
+
 			fi
 
 		fi
