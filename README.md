@@ -24,6 +24,7 @@ If you are not interested in one certain feature of my script you can just skip 
 
 #### Install ffmpeg
 **On Debian 9 "Stretch":**
+
 Please note that the default Debian package of ffmpeg does not support the RPi's hardware video decoder. This usually is no problem as long as you are not interested in transcoding. Otherwise you need to build ffmpeg from source – please refer to the section below:
 ```
 # 1) Make temporary directories for sources and building:
