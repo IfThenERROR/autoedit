@@ -139,7 +139,7 @@ crontab -e
 ```
 Paste in the last line
 ```
-0 4 * * * bash -l -c nice -n 19 autoedit
+0 4 * * * . $HOME/.profile && PATH=$PATH:/usr/local/bin && /usr/bin/nice -n 19 autoedit
 ```
 Hit Ctrl+o and Ctrl+x to save.
 
