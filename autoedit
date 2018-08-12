@@ -37,7 +37,7 @@ function appendfile {
 
 	else
 	
-		outputlog Creating queue for processing $infile .
+		outputlog Appending video file to queue.
 		return 0
 
 	fi
@@ -145,23 +145,23 @@ function processfile {
 	#Specify all individual non working series. Syntax format is:
 	#titlename="${titlename//name to replace case sensitive/new name}"
 	#E.g. titlename="${titlename//Star Trek - Das nächste Jahrhundert/Raumschiff Enterprise Das nachste Jahrhundert}"
-	titlename="${titlename//Star_Trek_-_Das_n_chste_Jahrhundert/Raumschiff Enterprise Das nachste Jahrhundert}"
-	titlename="${titlename//Star_Trek_-_Deep_Space_Nine/Deep Space Nine}"
-	titlename="${titlename//Grey\'s_Anatomy_-_Die_jungen_rzte/Greys Anatomy}"
+	titlename="${titlename//Star Trek - Das nächste Jahrhundert/Raumschiff Enterprise Das nachste Jahrhundert}"
+	titlename="${titlename//Star_Trek_-_Deep_Space_Nine/Star Trek - Deep Space Nine}"
+	titlename="${titlename//Grey\'s Anatomy - Die jungen Ärzte/Greys Anatomy}"
 	titlename="${titlename//Criminal_Intent_-_Verbrechen_im_Visier_-_/Criminal Intent - }"
 	titlename="${titlename//Fringe_-_Grenzf_lle_des_FBI/Fringe}"
 
 	##Some stations have the bad habbit to append the genre description after the episode instead of adequately using the correct fields in metadata.
 	##The following cleans this up – as good as possible...
-	episode="$(echo "${episode}" 2>&1 | perl -pe 's/_Sitcom$//g')"
-	episode="$(echo "${episode}" 2>&1 | perl -pe 's/_Comedy$//g')"
-	episode="$(echo "${episode}" 2>&1 | perl -pe 's/_Science-Fiction-Serie$//g')"
-	episode="$(echo "${episode}" 2>&1 | perl -pe 's/_Science-Fiction$//g')"
+	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Sitcom$//g')"
+	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Comedy$//g')"
+	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Science-Fiction-Serie$//g')"
+	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Science-Fiction$//g')"
 	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Crime-Serie$//g')"
-	episode="$(echo "${episode}" 2>&1 | perl -pe 's/_Krimi$//g')"
-	episode="$(echo "${episode}" 2>&1 | perl -pe 's/_Fantastisch$//g')"
-	episode="$(echo "${episode}" 2>&1 | perl -pe 's/_Mystery$//g')"
-	episode="$(echo "${episode}" 2>&1 | perl -pe 's/_Dramedy$//g')"
+	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Krimi$//g')"
+	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Fantastisch$//g')"
+	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Mystery$//g')"
+	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Dramedy$//g')"
 	episode="${episode%,}"
 
 	#Generate correct file name required for filebot or manual sorting.
@@ -461,7 +461,7 @@ done
 
 
 #Start logging
-outputlog Autoedit started with parameters "$arguments"
+## outputlog Autoedit started with parameters "$arguments"
 
 
 #######Prepare queue
@@ -470,6 +470,8 @@ then
 
 	#Test if video file was set
 	if [[ "$infile" != "" ]]; then
+
+		outputlog New video recorded. The file name is $infile .
 
 		#Test if queue file exists
 		if [ -f "${queuefile}" ]; then
@@ -491,7 +493,7 @@ then
 				else
 
 					#If video file not queued append to queue.
-					outputlog Some videos are already queued for post processing. Appending video file to queue.
+					outputlog Some videos are already waiting to be processed.
 					appendfile
 
 				fi
@@ -518,14 +520,14 @@ then
 		#Test if set to run
 		if [ "$wait" -eq 0 ]; then
 
-			outputlog Start processing...
 			outputlog
+			outputlog Start processing...
 			if [ -f "${queuefile}" ]; then
 
 				{ read -r QUEUE ; read -r -a QUEUE_ARRAY ; } < "${queuefile}"
 				if [[ "$QUEUE" != "" ]]; then
 
-					outputlog Fetched next video from queue file. Processing "$QUEUE".
+					outputlog Fetched next file from queue. Processing "$QUEUE".
 					infile="$QUEUE"
 
 					#Extract filename and path from argument
@@ -613,7 +615,7 @@ then
 
 					else
 
-						outputlog Video file in queue does not exist. Skipping!
+						outputlog File does not exist. Skipping!
 
 					fi
 
@@ -653,6 +655,7 @@ then
 				fi
 
 				outputlog Complete!
+				outputlog -------------------------------------------------
 				outputlog
 
 			fi
