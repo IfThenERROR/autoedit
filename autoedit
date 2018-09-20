@@ -471,7 +471,7 @@ then
 	#Test if video file was set
 	if [[ "$infile" != "" ]]; then
 
-		outputlog New video recorded. The file name is $infile .
+		outputlog New video recorded. The file name is "$infile" .
 
 		#Test if queue file exists
 		if [ -f "${queuefile}" ]; then
