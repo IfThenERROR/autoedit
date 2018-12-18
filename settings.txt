@@ -17,7 +17,7 @@ language="en"
 #Standard is "series_title (year)/season.episode_title.file_extension"
 #e.g. "Breaking Bad (2008)/S04E01.Box Cutter.mkv"
 #Including capital letters and spaces, file will be stored in the same directory
-nameFormatSeries='/home/osmc/TV/{n.ascii().replaceAll(/[?]+$/).tr("–","_").tr("*","_").tr("|",("_")} ({y})/{s00e00}.{t.ascii().replaceAll(/[?]+$/).tr(":","_").tr("*","_").tr("|","_")}'
+nameFormatSeries='/home/osmc/TV/{n.ascii().replaceAll(/[?]+$/).tr("–","_").tr("*","_").tr("|","_")} ({y})/{s00e00}.{t.ascii().replaceAll(/[?]+$/).tr(":","_").tr("*","_").tr("|","_")}'
 
 #Naming format for movies
 #Standard is "title (year)/title.file_extension"
