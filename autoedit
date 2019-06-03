@@ -1,5 +1,5 @@
 #! /bin/bash
-#v 1.2
+#v 1.3
 
 source "$(dirname "$(readlink -f "$0")")"/settings.txt
 
@@ -308,14 +308,24 @@ function processfile {
 				mkdir "${RawFolder}/Error-Duplicates"
 
 			fi
-			target=$(grep -i "\[TEST\] From.*${extension}\]$" "/tmp/autoedit_temp.txt")
+			target=$(grep -i "Failed to process" "/tmp/autoedit_temp.txt")
 			newfile="${outfile}"
 			if [[ "${target}" != "" ]]; then
 
+				#Cut line containing target path from log file
 				target="$(echo $target | cut -d" " -f3- | cut -d"[" -f3 | cut -d"]" -f1)"
+
+				#Cut full path from target path
 				newfile="${target%/*}"
+
+				#Cut only subdirectory from path
 				newfile="${newfile##*/}"
-				newfile="${newfile} - "$(basename "${target}" ."${extension}")
+
+				#Add filename to path
+				newfile="${newfile} - ${target##*/}"
+
+				#Remove extension
+				newfile="${newfile%.*}"
 
 			fi
 
@@ -333,9 +343,9 @@ function processfile {
 
 			fi
 			if [[ "$logging" == "long" ]]; then
-				outputlog Video was already in the library. Files were moved to "${RawFolder}/Error-Duplicates/${outfile}.${extension}"
+				outputlog Video was already in the library. Files were moved to "${RawFolder}/Error-Duplicates/${newfile}.${extension}"
 			elif [[ "$logging" == "short" ]]; then
-				outputlog Duplicate! Files moved to "${RawFolder}/Error-Duplicates/${outfile}.${extension}"
+				outputlog Duplicate! Files moved to "${RawFolder}/Error-Duplicates/${newfile}.${extension}"
 			fi
 		
 		#If no error move file to new directory
@@ -693,7 +703,15 @@ if [ "$abort" -eq 0 ]; then
 			read -r QUEUE < "${queuefile}"
 			if [[ "$QUEUE" != "" ]]; then
 
-				eval bash '$0'
+				if [[ "$logging" -eq "short" ]]; then
+
+					eval bash '$0' --logging "short"
+
+				else
+
+					eval bash '$0'
+
+				fi
 
 			else
 
@@ -709,7 +727,7 @@ if [ "$abort" -eq 0 ]; then
 					#done
 				
 					#Wait 5 minutes as Kodi does not respond when done and cannot clean and update the library at the same time
-					sleep 5m
+					#sleep 5m
 
 					#Then update library
 					for i in "${!KODI_ARRAY[@]}"; do
