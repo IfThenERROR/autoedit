@@ -1,5 +1,5 @@
 #! /bin/bash
-#v 1.1.01
+#v 1.2
 
 source "$(dirname "$(readlink -f "$0")")"/settings.txt
 
@@ -9,20 +9,28 @@ function outputlog {
 
 function appendfile {
 	autoeditparams=""
+	clearTitles
 	titlename="${titlename// /_}"
 	titlename="${titlename//__/_}"
 	episode="${episode// /_}"
 	episode="${episode//__/_}"
-	if [ $comskip -eq 1 ]; then autoeditparams="${autoeditparams} -c"; fi
-	if [[ $titlename != "" ]]; then autoeditparams="${autoeditparams} -t ${titlename}"; fi
-	if [[ $episode != "" ]]; then autoeditparams="${autoeditparams} -e ${episode}"; fi
-	if [ $transcode -eq 1 ]; then autoeditparams="${autoeditparams} -tc ${decoder} ${encoder} ${bitrate}"; fi
-	if [ $transcodeexternal -eq 1 ]; then autoeditparams="${autoeditparams} -tx ${txqueue}"; fi
-	if [ $movefile -eq 1 ]; then autoeditparams="${autoeditparams} -r"; fi
-	if [[ $mode = "m" ]]; then
-		autoeditparams="${autoeditparams} -m"
+	if [ $comskip -eq 1 ]; then autoeditparams="${autoeditparams} --comskip"; fi
+	if [[ $titlename != "" ]]; then autoeditparams="${autoeditparams} --title ${titlename}"; fi
+	if [[ $episode != "" ]]; then autoeditparams="${autoeditparams} --episode ${episode}"; fi
+	if [ $transcode -eq 1 ]; then autoeditparams="${autoeditparams} --transcode ${decoder} ${encoder} ${bitrate}"; fi
+	if [ $transcodeexternal -eq 1 ]; then autoeditparams="${autoeditparams} --transcodeexternal ${txqueue}"; fi
+	if [ $movefile -eq 1 ]; then autoeditparams="${autoeditparams} --rename"; fi
+	if [[ $mode = "m" ]]; then autoeditparams="${autoeditparams} --movie"; fi
+	if [[ $mode = "s" ]]; then autoeditparams="${autoeditparams} --series"; fi
+	if [ $logging != "long" ]; then autoeditparams="${autoeditparams} --logging ${logging}"; fi
+	if [[ $update -eq 1 ]]; then
+		{
+		autoeditparams="${autoeditparams} --update"
+		for i in "${!KODI_ARRAY[@]}"; do
+			autoeditparams="${autoeditparams} ${KODI_ARRAY[i]}"
+		done
+		}
 	fi
-	if [[ $mode = "s" ]]; then autoeditparams="${autoeditparams} -s"; fi
 
 	echo "${infile}" >> "${queuefile}"
 	echo "${autoeditparams}" >> "${queuefile}"
@@ -37,7 +45,11 @@ function appendfile {
 
 	else
 	
-		outputlog Appending video file to queue.
+		if [[ "$logging" == "long" ]]; then
+			outputlog Appending video file to queue.
+		elif [[ "$logging" == "short" ]]; then
+			outputlog Adding to queue.
+		fi
 		return 0
 
 	fi
@@ -45,6 +57,7 @@ function appendfile {
 
 function readArguments {
 	mode="s"
+	logging="long"
 	titlename=""
 	episode=""
 	comskip=0
@@ -87,8 +100,8 @@ function readArguments {
 									;;
 
 			-tx | --transcodeexternal )		transcodeexternal=1
-									shift
-									txqueue="$1"
+									(( i++ ))
+									txqueue="${QUEUE_ARRAY[i]}"
 									;;
 
 			-m | --movie )			mode="m"
@@ -98,6 +111,10 @@ function readArguments {
 									;;
 
 			-r | --rename )			movefile=1
+									;;
+
+			-l | --logging )		(( i++ ))
+									logging="${QUEUE_ARRAY[i]}"
 									;;
 
 			-u | --update )			update=1
@@ -126,6 +143,34 @@ function readArguments {
 
 }
 
+function clearTitles {
+	##Some stations do not use the correct series titles. This messes up filebot. Here you can add the skewed names.
+	#Specify all individual non working series. Syntax format is:
+	#titlename="${titlename//name to replace case sensitive/new name}"
+	#E.g. titlename="${titlename//Star Trek - Das nächste Jahrhundert/Raumschiff Enterprise Das nachste Jahrhundert}"
+	titlename="${titlename//_/ }"
+	titlename="${titlename//Star Trek - Das nächste Jahrhundert/Raumschiff Enterprise Das nachste Jahrhundert}"
+	titlename="${titlename//Star Trek - Deep Space Nine/Star Trek - Deep Space Nine}"
+	titlename="${titlename//Grey\'s Anatomy - Die jungen Ärzte/Greys Anatomy}"
+	titlename="${titlename//Criminal_Intent - Verbrechen im Visier - /Criminal Intent - }"
+	titlename="${titlename//Fringe - Grenzfälle des FBI/Fringe}"
+
+	##Some stations have the bad habbit to append the genre description after the episode instead of adequately using the correct fields in metadata.
+	##The following cleans this up – as good as possible...
+	episode="${episode//_/ }"
+	episode="$(echo "${episode}" 2>&1 | perl -pe 's/,[A-Za-z ]*?[0-9][0-9][0-9][0-9]//g')"
+	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Sitcom$//g')"
+	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Comedy$//g')"
+	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Science-Fiction-Serie$//g')"
+	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Science-Fiction$//g')"
+	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Crime-Serie$//g')"
+	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Krimi$//g')"
+	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Fantastisch$//g')"
+	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Mystery$//g')"
+	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Dramedy$//g')"
+	episode="${episode%,}"
+}
+
 function processfile {
 	#Extract title and episode info from metadata
 	if [[ "${titlename}" == "" ]]; then
@@ -141,28 +186,7 @@ function processfile {
 
 	fi
 
-	##Some stations do not use the correct series titles. This messes up filebot. Here you can add the skewed names.
-	#Specify all individual non working series. Syntax format is:
-	#titlename="${titlename//name to replace case sensitive/new name}"
-	#E.g. titlename="${titlename//Star Trek - Das nächste Jahrhundert/Raumschiff Enterprise Das nachste Jahrhundert}"
-	titlename="${titlename//Star Trek - Das nächste Jahrhundert/Raumschiff Enterprise Das nachste Jahrhundert}"
-	titlename="${titlename//Star_Trek_-_Deep_Space_Nine/Star Trek - Deep Space Nine}"
-	titlename="${titlename//Grey\'s Anatomy - Die jungen Ärzte/Greys Anatomy}"
-	titlename="${titlename//Criminal_Intent_-_Verbrechen_im_Visier_-_/Criminal Intent - }"
-	titlename="${titlename//Fringe_-_Grenzf_lle_des_FBI/Fringe}"
-
-	##Some stations have the bad habbit to append the genre description after the episode instead of adequately using the correct fields in metadata.
-	##The following cleans this up – as good as possible...
-	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Sitcom$//g')"
-	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Comedy$//g')"
-	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Science-Fiction-Serie$//g')"
-	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Science-Fiction$//g')"
-	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Crime-Serie$//g')"
-	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Krimi$//g')"
-	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Fantastisch$//g')"
-	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Mystery$//g')"
-	episode="$(echo "${episode}" 2>&1 | perl -pe 's/ Dramedy$//g')"
-	episode="${episode%,}"
+	clearTitles
 
 	#Generate correct file name required for filebot or manual sorting.
 	if [ $mode = "s" ]; then
@@ -224,7 +248,11 @@ function processfile {
 
 			else
 
-				outputlog Transcoding completed successfully. The original file will be replaced.
+				if [[ "$logging" == "long" ]]; then
+					outputlog Transcoding completed successfully. The original file will be replaced.
+				elif [[ "$logging" == "short" ]]; then
+					outputlog Transcoding completed.
+				fi
 				rm "${RawFolder}/temp.${extension}" 2> /dev/null
 				mv "${RawFolder}/temp_transcode.${extension}" "${RawFolder}/temp.${extension}" 2> /dev/null
 
@@ -258,12 +286,13 @@ function processfile {
 		fi
 	
 		#If not found in Database move to error directory
-		if [[ $(grep "Failed to fetch" "/tmp/autoedit_temp.txt") != "" ]]; then
+		if [[ $(grep -i "Failed to fetch" "/tmp/autoedit_temp.txt") != "" ]]; then
 
 			#Create directory if not existant
 			if [ ! -d "${RawFolder}/Error-NotInDatabase" ]; then
 				mkdir "${RawFolder}/Error-NotInDatabase"
 			fi
+			target="${RawFolder}/Error-NotInDatabase/${outfile}.${extension}"
 			mv -n "${RawFolder}/${outfile}.${extension}" "${RawFolder}/Error-NotInDatabase/${outfile}.${extension}"
 			if [ -f "${RawFolder}/${outfile}.edl" ]; then
 				mv -n "${RawFolder}/${outfile}.edl" "${RawFolder}/Error-NotInDatabase/${outfile}.edl"
@@ -271,7 +300,7 @@ function processfile {
 			outputlog Failed to rename file: Not found in online database
 				
 		#If video or edl present move to duplicates directory
-		elif [[ $(grep "File already exists" "/tmp/autoedit_temp.txt") != "" ]]; then
+		elif [[ $(grep -i "already exists" "/tmp/autoedit_temp.txt") != "" ]]; then
 
 			#Create directory if not existant
 			if [ ! -d "${RawFolder}/Error-Duplicates" ]; then
@@ -279,7 +308,7 @@ function processfile {
 				mkdir "${RawFolder}/Error-Duplicates"
 
 			fi
-			target=$(grep "\[TEST\] From.*${extension}\]$" "/tmp/autoedit_temp.txt")
+			target=$(grep -i "\[TEST\] From.*${extension}\]$" "/tmp/autoedit_temp.txt")
 			newfile="${outfile}"
 			if [[ "${target}" != "" ]]; then
 
@@ -296,18 +325,23 @@ function processfile {
 				newfile="$newfile"_1
 
 			done
+			target="${RawFolder}/Error-Duplicates/${newfile}.${extension}"
 			mv -n "${RawFolder}/${outfile}.${extension}" "${RawFolder}/Error-Duplicates/${newfile}.${extension}"
 			if [ -f "${RawFolder}/${outfile}.edl" ]; then
 
 				mv -n "${RawFolder}/${outfile}.edl" "${RawFolder}/Error-Duplicates/${newfile}.edl"
 
 			fi
-			outputlog Video was already in the library. Files were moved to "${RawFolder}/Error-Duplicates/${outfile}.${extension}"
+			if [[ "$logging" == "long" ]]; then
+				outputlog Video was already in the library. Files were moved to "${RawFolder}/Error-Duplicates/${outfile}.${extension}"
+			elif [[ "$logging" == "short" ]]; then
+				outputlog Duplicate! Files moved to "${RawFolder}/Error-Duplicates/${outfile}.${extension}"
+			fi
 		
 		#If no error move file to new directory
-		elif [[ $(grep "Processed " "/tmp/autoedit_temp.txt") != "" ]] && [[ $(grep "Failure" "/tmp/autoedit_temp.txt") == "" ]]; then
+		elif [[ $(grep -i "Processed " "/tmp/autoedit_temp.txt") != "" ]] && [[ $(grep -i "Failure" "/tmp/autoedit_temp.txt") == "" ]]; then
 
-			target=$(grep "\[TEST\] From.*${extension}\]$" "/tmp/autoedit_temp.txt")
+			target=$(grep -i "\[TEST\] from.*${extension}\]$" "/tmp/autoedit_temp.txt")
 			target="$(echo $target | cut -d" " -f3- | cut -d"[" -f3 | cut -d"]" -f1)"
 			if [ ! -d "${target%/*}" ]; then
 
@@ -315,18 +349,24 @@ function processfile {
 
 			fi
 			mv -n "${RawFolder}/${outfile}.${extension}" "${target}"
-			mv -n "${RawFolder}/${outfile}.edl" "${target%\.*}.edl"
-			outputlog Files moved to "${target}"
+			if [ -f "${RawFolder}/${outfile}.edl" ]; then
+
+				mv -n "${RawFolder}/${outfile}.edl" "${target%\.*}.edl"
+
+			fi
+			if [[ "$logging" == "long" || "$logging" == "short" ]]; then
+				outputlog Files moved to "${target}"
+			fi
 			RawFolder="${target%/*}"
 			outfile=$(basename "${target}" ."${extension}")
 
 			#Check if external transcoding and add to queue
 			if [[ $transcodeexternal -eq 1 ]]; then
 
-				echo "${RawFolder}/${outfile}.${extension}"
-				echo "${txqueue}"
-				"${RawFolder}/${outfile}.${extension}" >> "${txqueue}"
-				outputlog Added "${RawFolder}/${outfile}.${extension}" for external transcoding.
+				echo "${RawFolder}/${outfile}.${extension}" >> "${txqueue}"
+				if [[ "$logging" == "long" || "$logging" == "short" ]]; then
+					outputlog Added "${RawFolder}/${outfile}.${extension}" for external transcoding.
+				fi
 
 			fi
 
@@ -337,23 +377,25 @@ function processfile {
 		
 		rm -f /tmp/autoedit_temp.txt
 
-	fi
+	elif [[ $transcodeexternal -eq 1 ]]; then
 
-	#Check if external transcoding and add to queue
-	if [[ $transcodeexternal -eq 1 ]] && [[ $movefile -eq 0 ]]; then
+		echo "${RawFolder}/${outfile}.${extension}" >> "${txqueue}"
+		if [[ "$logging" == "long" || "$logging" == "short" ]]; then
 
-		"${RawFolder}/${outfile}.${extension}" >> "${txqueue}"
-		outputlog Added "${RawFolder}/${outfile}.${extension}" for external transcoding.
+			outputlog Added "${RawFolder}/${outfile}.${extension}" for external transcoding.
+
+		fi
 
 	fi
 }
 
 
 #Init variables
-arguments=""
 help=0
 abort=0
 wait=0
+infile=""
+logging="long"
 comskip=0
 transcode=0
 transcodeexternal=0
@@ -370,7 +412,6 @@ unknowncommand=""
 
 
 #Read parameters from command line
-arguments=("$@")
 while [ "$1" != "" ]; do
 
     case $1 in
@@ -423,11 +464,14 @@ while [ "$1" != "" ]; do
 								abort=1
 								;;
 
+		-l | --logging )		shift
+								logging="$1"
+								;;
+
 		-u | --update )			update=1
-								shift
 								j=0
-								while [[ ! "$1" == "-"* ]] && [[ ! "$1" == "" ]]; do
-									KODI_ARRAY[j]="$1"
+								while [[ ! "$2" == "-"* ]] && [[ ! "$2" == "" ]]; do
+									KODI_ARRAY[j]="$2"
 									shift
 									(( j++ ))
 								done
@@ -459,14 +503,17 @@ done
 
 	fi
 
+	if [[ "$logging" != "long" ]] && [[ "$logging" != "short" ]] && [[ "$logging" != "none" ]] && [[ "$logging" != "off" ]]; then
 
-#Start logging
-## outputlog Autoedit started with parameters "$arguments"
+		help=1
+		abort=1
+		unknown=1
+		unknowncommand="ERROR: Parameter for --logging unknown"
 
+	fi
 
 #######Prepare queue
-if [ "$abort" -eq 0 ]
-then
+if [ "$abort" -eq 0 ]; then
 
 	#Test if video file was set
 	if [[ "$infile" != "" ]]; then
@@ -488,12 +535,20 @@ then
 				if [[ $FOUND -eq 1 ]]; then
 
 					#If video file already queued just quit.
-					outputlog Video file already queued, not adding duplicates.
+					if [[ "$logging" == "long" ]]; then
+						outputlog Video file already queued, not adding duplicates.
+					elif [[ "$logging" == "short" ]]; then
+						outputlog Not adding duplicates.
+					fi
 
 				else
 
 					#If video file not queued append to queue.
-					outputlog Some videos are already waiting to be processed.
+					if [[ "$logging" == "long" ]]; then
+						outputlog Some videos are already waiting to be processed.
+					elif [[ "$logging" == "short" ]]; then
+						outputlog Queueing.
+					fi
 					appendfile
 
 				fi
@@ -527,7 +582,11 @@ then
 				{ read -r QUEUE ; read -r -a QUEUE_ARRAY ; } < "${queuefile}"
 				if [[ "$QUEUE" != "" ]]; then
 
-					outputlog Fetched next file from queue. Processing "$QUEUE".
+					if [[ "$logging" == "long" ]]; then
+						outputlog Fetched next file from queue. Processing "$QUEUE".
+					elif [[ "$logging" == "short" ]]; then
+						outputlog Next file: "$QUEUE".
+					fi
 					infile="$QUEUE"
 
 					#Extract filename and path from argument
@@ -539,14 +598,18 @@ then
 
 				else
 
-					outputlog No file in queue.
+					if [[ "$logging" == "long" || "$logging" == "short" ]]; then
+						outputlog No file in queue.
+					fi
 					exit
 
 				fi
 
 			else
 
-				outputlog No file in queue.
+				if [[ "$logging" == "long" || "$logging" == "short" ]]; then
+					outputlog No file in queue.
+				fi
 				exit
 
 
@@ -588,7 +651,7 @@ then
 				#Check if a temp file is left
 				if [ -f "${RawFolder}/temp.${extension}" ]; then
 
-					outputlog ERROR! A files from unfinished run was found.
+					outputlog ERROR! A file from unfinished run was found.
 					outputlog Please check, if the file can be removed and fix "${queuefile}" manually.
 					outputlog Aborting...
 					outputlog
@@ -639,9 +702,11 @@ then
 				#Update video library
 				if [[ "$update" -eq 1 ]]; then
 					#Clean library first
-					for i in "${!KODI_ARRAY[@]}"; do
-						curl --data-binary '{ "jsonrpc": "2.0", "method": "VideoLibrary.Clean"}' -H 'content-type: application/json;' http://"${KODI_ARRAY[i]}":8080/jsonrpc
-					done
+					## Removed for the time being – permanently erases library if remote sources are temporarily unavailable!
+					##
+					#for i in "${!KODI_ARRAY[@]}"; do
+					#	curl --data-binary '{ "jsonrpc": "2.0", "method": "VideoLibrary.Clean"}' -H 'content-type: application/json;' http://"${KODI_ARRAY[i]}":8080/jsonrpc
+					#done
 				
 					#Wait 5 minutes as Kodi does not respond when done and cannot clean and update the library at the same time
 					sleep 5m
@@ -649,7 +714,9 @@ then
 					#Then update library
 					for i in "${!KODI_ARRAY[@]}"; do
 						curl --data-binary '{ "jsonrpc": "2.0", "method": "VideoLibrary.Scan"}' -H 'content-type: application/json;' http://"${KODI_ARRAY[i]}":8080/jsonrpc
-						outputlog Updating Kodi video library for client "${KODI_ARRAY[i]}"
+						if [[ "$logging" == "long" || "$logging" == "short" ]]; then
+							outputlog Updating Kodi video library for client "${KODI_ARRAY[i]}"
+						fi
 					done
 
 				fi
@@ -693,6 +760,8 @@ Examples:
 
 Options:
  -h | --help     : Show help.
+
+ -l | --logging  : Set logging mode to "long", "short", or "off".
 
  -i | --input FILE : File to process, requires full path.
 
