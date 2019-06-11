@@ -1,4 +1,4 @@
-## autoedit v 1.1.01
+## autoedit v 1.3.1
 ### A script to turn Kodi with TVHeadend into a fully automated DVR
 
 Turn your system into a fully automated TV recorder. It's supposed to just work without further interaction with the end users (wife and kids). In fact they should not even notice anything is happening in the background. The system should just silently do it's task, record all the favorite series and movies, remove all the advertising junk, convert everything to a decently compressed format and cleanly add every recording to the movie or series library.
@@ -192,7 +192,7 @@ Now let's hook up autoedit in TVHeadend. Open a browser and go to the TVHeadend 
 
 --transcode [decoder] [encoder] [bitrate]: Transcodes the video using ffmpeg. The sample above does de- and encoding in RPi's hardware and hence is pretty fast but only medium quality. For SD videos it's near 90 fps. Make sure you use the correct settings here.
 
---transcodeexternal [file]: Add the resulting video file to the specified list.
+--transcodeexternal [file]: Add the resulting video file to the specified list. This list can be read from external scripts to achieve better quality for transcoding.
 
 --wait : Do not start processing immediately, just queue the video.
 
