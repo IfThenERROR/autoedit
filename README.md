@@ -32,6 +32,7 @@ mkdir $HOME/sources
 # 2) Install ffmpeg standard package and dev libraries
 sudo apt-get update
 sudo apt-get install ffmpeg libavcodec-dev libavformat-dev libavutil-dev
+## Continue with #7.
 ```
 
 **_DEPRECATED!_ Build ffmpeg from source (only needed on Debian 8 "Jessie" and earlier):**
