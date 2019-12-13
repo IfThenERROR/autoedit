@@ -1,4 +1,4 @@
-## autoedit v 1.3.1
+## autoedit v 1.4
 ### A script to turn Kodi with TVHeadend into a fully automated DVR
 
 Turn your system into a fully automated TV recorder. It's supposed to just work without further interaction with the end users (wife and kids). In fact they should not even notice anything is happening in the background. The system should just silently do it's task, record all the favorite series and movies, remove all the advertising junk, convert everything to a decently compressed format and cleanly add every recording to the movie or series library.
