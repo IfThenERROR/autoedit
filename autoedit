@@ -428,8 +428,7 @@ function processfile {
 	fi
 }
 
-
-#Init variables
+function initVariables {
 help=0
 abort=0
 wait=0
@@ -449,9 +448,9 @@ forcerun=0
 unknown=0
 unknowncommand=""
 n=""
+}
 
-
-#Read parameters from command line
+function readParameters {
 while [ "$1" != "" ]; do
 
     case $1 in
@@ -464,11 +463,11 @@ while [ "$1" != "" ]; do
 								;;
 
 		-t | --title )			shift
-								titlename=$1
+								titlename="$1"
 								;;
 
 		-e | --episode )		shift
-								episode=$1
+								episode="$1"
 								;;
 
 		-tc | --transcode )		transcode=1
@@ -552,9 +551,9 @@ done
 
 	fi
 
-#######Prepare queue
-if [ "$abort" -eq 0 ]; then
+}
 
+function prepareQueue {
 	#Test if video file was set
 	if [[ "$infile" != "" ]]; then
 
@@ -791,14 +790,9 @@ if [ "$abort" -eq 0 ]; then
 		fi
 
 	fi
+}
 
-fi
-
-
-#Show help if requested then quit
-if [[ $help -eq 1 ]]
-then
-
+function showHelp {
 	if [[ $unknown -eq 1 ]]; then
 		echo ERROR! Unknown parameter: "$unknowncommand"
 	fi
@@ -867,4 +861,16 @@ Options:
                    Will also attempt to resume unfinished files from
                    previous runs.'
 
-fi
+
+}
+
+initVariables
+
+#Read parameters from command line
+readParameters "$@"
+
+#Prepare queue
+if [ "$abort" -eq 0 ]; then prepareQueue; fi
+
+#Show help if requested then quit
+if [[ $help -eq 1 ]]; then showHelp; fi
